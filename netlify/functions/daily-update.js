@@ -13,16 +13,31 @@ let dataCache = {
   major: { matches: [], count: 0 }
 };
 
-async function fetchMatchData(endpoint) {
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    headers: { 'X-Auth-Token': API_KEY }
-  });
+async function fetchMatchData(endpoint, timeout = 10000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
   
-  if (!response.ok) {
-    throw new Error(`API request failed: ${response.status}`);
+  try {
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      headers: { 
+        'X-Auth-Token': API_KEY,
+        'User-Agent': 'YallaFoot/1.0'
+      },
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`API request failed: ${response.status} - ${errorText}`);
+    }
+    
+    return response.json();
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
   }
-  
-  return response.json();
 }
 
 function shouldUpdateCache() {
@@ -115,37 +130,33 @@ exports.handler = async (event, context) => {
     // Test a simple API call first
     console.log('🧪 Testing basic API connectivity...');
     const testResponse = await fetch(`${API_BASE}/competitions`, {
-      headers: { 'X-Auth-Token': API_KEY }
+      headers: { 
+        'X-Auth-Token': API_KEY,
+        'User-Agent': 'YallaFoot/1.0'
+      }
     });
     
     if (!testResponse.ok) {
-      throw new Error(`API test failed: ${testResponse.status} ${testResponse.statusText}`);
+      const errorText = await testResponse.text();
+      throw new Error(`API test failed: ${testResponse.status} - ${errorText}`);
     }
     
     console.log('✅ API connectivity test passed');
     
-    // Fetch all match data with individual error handling
-    console.log('📡 Fetching yesterday matches...');
-    const yesterdayData = await fetchMatchData(`/matches?dateFrom=${yesterday}&dateTo=${yesterday}`);
-    console.log(`✅ Yesterday: ${yesterdayData.matches?.length || 0} matches`);
-    
+    // Fetch today's matches only (simplified approach)
     console.log('📡 Fetching today matches...');
     const todayData = await fetchMatchData(`/matches?dateFrom=${today}&dateTo=${today}`);
     console.log(`✅ Today: ${todayData.matches?.length || 0} matches`);
     
-    console.log('📡 Fetching tomorrow matches...');
-    const tomorrowData = await fetchMatchData(`/matches?dateFrom=${tomorrow}&dateTo=${tomorrow}`);
-    console.log(`✅ Tomorrow: ${tomorrowData.matches?.length || 0} matches`);
-    
-    // Major competitions data with individual handling
+    // Fetch major competitions data (limit to 3 most important)
     console.log('🏆 Fetching major competitions...');
-    const competitions = ['PL', 'CL', 'EL', 'SA', 'PD', 'BL1', 'FL1'];
+    const competitions = ['PL', 'CL', 'SA']; // Limited to prevent timeout
     const majorMatches = [];
     
     for (const comp of competitions) {
       try {
         console.log(`📡 Fetching ${comp}...`);
-        const compData = await fetchMatchData(`/competitions/${comp}/matches?dateFrom=${yesterday}&dateTo=${tomorrow}`);
+        const compData = await fetchMatchData(`/competitions/${comp}/matches?dateFrom=${yesterday}&dateTo=${tomorrow}`, 8000);
         if (compData.matches) {
           majorMatches.push(...compData.matches);
           console.log(`✅ ${comp}: ${compData.matches.length} matches`);
@@ -157,12 +168,12 @@ exports.handler = async (event, context) => {
     
     console.log(`🏆 Total major matches: ${majorMatches.length}`);
     
-    // Update cache
+    // Update cache with simplified data
     dataCache = {
       lastUpdate: new Date().toISOString(),
       yesterday: {
-        matches: yesterdayData.matches || [],
-        count: yesterdayData.matches?.length || 0,
+        matches: [],
+        count: 0,
         date: yesterday
       },
       today: {
@@ -171,8 +182,8 @@ exports.handler = async (event, context) => {
         date: today
       },
       tomorrow: {
-        matches: tomorrowData.matches || [],
-        count: tomorrowData.matches?.length || 0,
+        matches: [],
+        count: 0,
         date: tomorrow
       },
       major: {
@@ -184,9 +195,7 @@ exports.handler = async (event, context) => {
     
     console.log(`✅ Cache updated successfully`);
     console.log(`📊 Data summary:`);
-    console.log(`  Yesterday: ${dataCache.yesterday.count} matches`);
     console.log(`  Today: ${dataCache.today.count} matches`);
-    console.log(`  Tomorrow: ${dataCache.tomorrow.count} matches`);
     console.log(`  Major competitions: ${dataCache.major.count} matches`);
     
     return {
