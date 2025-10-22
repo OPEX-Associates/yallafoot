@@ -1,0 +1,17 @@
+# Robots.txt for YallaFoot
+User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: https://yallafoot.netlify.app/sitemap.xml
+
+# Disallow admin areas (if any in future)
+Disallow: /admin/
+Disallow: /_next/
+Disallow: /api/
+
+# Allow search engines to crawl all public content
+Allow: /
+Allow: /matches/
+Allow: /about/
+Allow: /reviews/

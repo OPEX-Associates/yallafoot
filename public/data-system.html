@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YallaFoot - Daily Data System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <div class="bg-white rounded-lg shadow-lg p-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-6">🔄 Daily Data Update System</h1>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Current System Status -->
+                <div class="space-y-6">
+                    <h2 class="text-xl font-semibold text-gray-800">📊 Current System Status</h2>
+                    
+                    <div class="space-y-4">
+                        <div class="p-4 bg-green-50 border border-green-200 rounded-lg">
+                            <h3 class="font-medium text-green-800">✅ Static Data Files</h3>
+                            <p class="text-sm text-green-600">Data is loaded from static JSON files</p>
+                            <p class="text-xs text-green-500">No API rate limits during user visits</p>
+                        </div>
+                        
+                        <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                            <h3 class="font-medium text-blue-800">🕰️ Daily Updates</h3>
+                            <p class="text-sm text-blue-600">Netlify scheduled function runs at 6 AM UTC</p>
+                            <p class="text-xs text-blue-500">Updates all match data once per day</p>
+                        </div>
+                        
+                        <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <h3 class="font-medium text-yellow-800">📦 Fallback System</h3>
+                            <p class="text-sm text-yellow-600">Mock data when API unavailable</p>
+                            <p class="text-xs text-yellow-500">Always ensures site functionality</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Data Files Status -->
+                <div class="space-y-6">
+                    <h2 class="text-xl font-semibold text-gray-800">📁 Data Files Status</h2>
+                    
+                    <div id="dataStatus" class="space-y-3">
+                        <div class="p-3 bg-gray-50 rounded-lg">
+                            <div class="flex justify-between items-center">
+                                <span class="font-medium">Yesterday Matches</span>
+                                <span id="yesterday-status" class="text-sm text-gray-500">Loading...</span>
+                            </div>
+                            <div id="yesterday-info" class="text-xs text-gray-400"></div>
+                        </div>
+                        
+                        <div class="p-3 bg-gray-50 rounded-lg">
+                            <div class="flex justify-between items-center">
+                                <span class="font-medium">Today Matches</span>
+                                <span id="today-status" class="text-sm text-gray-500">Loading...</span>
+                            </div>
+                            <div id="today-info" class="text-xs text-gray-400"></div>
+                        </div>
+                        
+                        <div class="p-3 bg-gray-50 rounded-lg">
+                            <div class="flex justify-between items-center">
+                                <span class="font-medium">Tomorrow Matches</span>
+                                <span id="tomorrow-status" class="text-sm text-gray-500">Loading...</span>
+                            </div>
+                            <div id="tomorrow-info" class="text-xs text-gray-400"></div>
+                        </div>
+                        
+                        <div class="p-3 bg-gray-50 rounded-lg">
+                            <div class="flex justify-between items-center">
+                                <span class="font-medium">Major Competitions</span>
+                                <span id="major-status" class="text-sm text-gray-500">Loading...</span>
+                            </div>
+                            <div id="major-info" class="text-xs text-gray-400"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Instructions -->
+            <div class="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+                <h2 class="text-lg font-semibold text-blue-900 mb-4">🚀 Deployment Instructions</h2>
+                <ol class="list-decimal list-inside space-y-2 text-sm text-blue-800">
+                    <li><strong>Deploy to Netlify:</strong> Connect your GitHub repository</li>
+                    <li><strong>Set Environment Variables:</strong>
+                        <ul class="ml-4 mt-1 space-y-1 text-xs">
+                            <li>• <code>FOOTBALL_DATA_API_KEY</code> = 1b2d888724d847cabe75e14c7530033d</li>
+                            <li>• <code>GITHUB_TOKEN</code> = (Personal Access Token with repo access)</li>
+                            <li>• <code>GITHUB_REPO</code> = username/repo-name</li>
+                        </ul>
+                    </li>
+                    <li><strong>Enable Scheduled Functions:</strong> They'll run automatically</li>
+                    <li><strong>Daily Updates:</strong> Match data refreshes every day at 6 AM UTC</li>
+                </ol>
+            </div>
+            
+            <!-- Benefits -->
+            <div class="mt-6 p-6 bg-green-50 border border-green-200 rounded-lg">
+                <h2 class="text-lg font-semibold text-green-900 mb-4">✨ System Benefits</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-green-800">
+                    <div>
+                        <h3 class="font-medium">Performance</h3>
+                        <ul class="mt-1 space-y-1 text-xs">
+                            <li>• Instant loading (no API delays)</li>
+                            <li>• No rate limit issues</li>
+                            <li>• Reliable for all users</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="font-medium">Cost-Effective</h3>
+                        <ul class="mt-1 space-y-1 text-xs">
+                            <li>• Only 3 API calls per day</li>
+                            <li>• Free tier is sufficient</li>
+                            <li>• Scalable to any traffic</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        async function checkDataFiles() {
+            const files = [
+                { id: 'yesterday', url: '/data/matches-yesterday.json' },
+                { id: 'today', url: '/data/matches-today.json' },
+                { id: 'tomorrow', url: '/data/matches-tomorrow.json' },
+                { id: 'major', url: '/data/matches-major.json' }
+            ];
+            
+            for (const file of files) {
+                try {
+                    const response = await fetch(file.url);
+                    if (response.ok) {
+                        const data = await response.json();
+                        document.getElementById(`${file.id}-status`).textContent = `${data.count} matches`;
+                        document.getElementById(`${file.id}-status`).className = 'text-sm text-green-600';
+                        
+                        const lastUpdated = new Date(data.lastUpdated).toLocaleString();
+                        document.getElementById(`${file.id}-info`).textContent = `Last updated: ${lastUpdated}`;
+                    } else {
+                        document.getElementById(`${file.id}-status`).textContent = 'File not found';
+                        document.getElementById(`${file.id}-status`).className = 'text-sm text-red-600';
+                    }
+                } catch (error) {
+                    document.getElementById(`${file.id}-status`).textContent = 'Error loading';
+                    document.getElementById(`${file.id}-status`).className = 'text-sm text-red-600';
+                }
+            }
+        }
+        
+        // Check data files on page load
+        checkDataFiles();
+    </script>
+</body>
+</html>
