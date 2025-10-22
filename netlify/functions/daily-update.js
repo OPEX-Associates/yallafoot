@@ -33,6 +33,12 @@ function shouldUpdateCache() {
   return hoursSinceUpdate > 6;
 }
 
+function shouldForceUpdate(event) {
+  // Check for manual trigger parameters
+  const queryParams = event.queryStringParameters || {};
+  return queryParams.force === 'true' || queryParams.refresh === 'true' || queryParams.admin === 'true';
+}
+
 exports.handler = async (event, context) => {
   // Enable CORS
   const headers = {
@@ -48,8 +54,10 @@ exports.handler = async (event, context) => {
   }
 
   // Check if we need to update cache
-  if (!shouldUpdateCache()) {
-    console.log('� Serving cached data');
+  const forceUpdate = shouldForceUpdate(event);
+  
+  if (!shouldUpdateCache() && !forceUpdate) {
+    console.log('📦 Serving cached data');
     return {
       statusCode: 200,
       headers,
@@ -62,7 +70,11 @@ exports.handler = async (event, context) => {
     };
   }
 
-  console.log('🚀 Fetching fresh match data...');
+  if (forceUpdate) {
+    console.log('� MANUAL TRIGGER: Force updating cache...');
+  } else {
+    console.log('�🚀 Fetching fresh match data...');
+  }
   
   if (!API_KEY) {
     return {

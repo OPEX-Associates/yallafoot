@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YallaFoot - Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold text-green-400 mb-2">🔧 YallaFoot Admin Panel</h1>
+                <p class="text-gray-400">Hidden admin tools for testing and debugging</p>
+            </div>
+
+            <!-- Function Trigger Section -->
+            <div class="bg-gray-800 rounded-lg p-6 mb-6">
+                <h2 class="text-xl font-semibold text-blue-400 mb-4">📡 Function Triggers</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <button 
+                        id="triggerUpdate" 
+                        class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+                    >
+                        🚀 Force Data Update
+                    </button>
+                    
+                    <button 
+                        id="testMatches" 
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+                    >
+                        🏈 Test Matches API
+                    </button>
+                </div>
+
+                <!-- Status Display -->
+                <div id="status" class="bg-gray-700 rounded-lg p-4 min-h-[100px]">
+                    <div class="text-yellow-400">Ready to test functions...</div>
+                </div>
+            </div>
+
+            <!-- Live Data Preview -->
+            <div class="bg-gray-800 rounded-lg p-6 mb-6">
+                <h2 class="text-xl font-semibold text-purple-400 mb-4">📊 Live Data Preview</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                    <div class="bg-gray-700 rounded-lg p-4">
+                        <h3 class="text-sm font-medium text-gray-300">Yesterday</h3>
+                        <div id="yesterday-count" class="text-2xl font-bold text-green-400">-</div>
+                        <div id="yesterday-time" class="text-xs text-gray-500">-</div>
+                    </div>
+                    
+                    <div class="bg-gray-700 rounded-lg p-4">
+                        <h3 class="text-sm font-medium text-gray-300">Today</h3>
+                        <div id="today-count" class="text-2xl font-bold text-blue-400">-</div>
+                        <div id="today-time" class="text-xs text-gray-500">-</div>
+                    </div>
+                    
+                    <div class="bg-gray-700 rounded-lg p-4">
+                        <h3 class="text-sm font-medium text-gray-300">Tomorrow</h3>
+                        <div id="tomorrow-count" class="text-2xl font-bold text-yellow-400">-</div>
+                        <div id="tomorrow-time" class="text-xs text-gray-500">-</div>
+                    </div>
+                    
+                    <div class="bg-gray-700 rounded-lg p-4">
+                        <h3 class="text-sm font-medium text-gray-300">Major</h3>
+                        <div id="major-count" class="text-2xl font-bold text-purple-400">-</div>
+                        <div id="major-time" class="text-xs text-gray-500">-</div>
+                    </div>
+                </div>
+
+                <button 
+                    id="refreshData" 
+                    class="bg-gray-600 hover:bg-gray-500 text-white py-2 px-4 rounded-lg transition-colors"
+                >
+                    🔄 Refresh Preview
+                </button>
+            </div>
+
+            <!-- Raw JSON Output -->
+            <div class="bg-gray-800 rounded-lg p-6">
+                <h2 class="text-xl font-semibold text-red-400 mb-4">🔍 Raw Function Output</h2>
+                <pre id="rawOutput" class="bg-black rounded-lg p-4 text-green-400 text-sm overflow-auto max-h-96">
+Click "Force Data Update" to see raw JSON response...
+                </pre>
+            </div>
+
+            <!-- Footer -->
+            <div class="text-center mt-8 text-gray-500 text-sm">
+                <p>⚠️ This is a hidden admin panel - Keep the URL secret!</p>
+                <p>URL: <code class="bg-gray-800 px-2 py-1 rounded">/admin-panel.html</code></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const statusDiv = document.getElementById('status');
+        const rawOutput = document.getElementById('rawOutput');
+
+        function updateStatus(message, type = 'info') {
+            const colors = {
+                info: 'text-blue-400',
+                success: 'text-green-400',
+                error: 'text-red-400',
+                warning: 'text-yellow-400'
+            };
+            
+            const timestamp = new Date().toLocaleTimeString();
+            statusDiv.innerHTML = `
+                <div class="${colors[type]}">
+                    <span class="text-gray-500">[${timestamp}]</span> ${message}
+                </div>
+                ${statusDiv.innerHTML}
+            `;
+        }
+
+        // Force trigger the daily update function
+        document.getElementById('triggerUpdate').addEventListener('click', async () => {
+            updateStatus('🚀 Triggering daily update function...', 'info');
+            
+            try {
+                const response = await fetch('/.netlify/functions/daily-update', {
+                    method: 'GET'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    updateStatus('✅ Function executed successfully!', 'success');
+                    
+                    // Display raw output
+                    rawOutput.textContent = JSON.stringify(data, null, 2);
+                    
+                    // Update preview if data available
+                    if (data.data) {
+                        document.getElementById('yesterday-count').textContent = data.data.yesterday?.count || 0;
+                        document.getElementById('today-count').textContent = data.data.today?.count || 0;
+                        document.getElementById('tomorrow-count').textContent = data.data.tomorrow?.count || 0;
+                        document.getElementById('major-count').textContent = data.data.major?.count || 0;
+                        
+                        const updateTime = new Date(data.lastUpdate).toLocaleTimeString();
+                        document.getElementById('yesterday-time').textContent = updateTime;
+                        document.getElementById('today-time').textContent = updateTime;
+                        document.getElementById('tomorrow-time').textContent = updateTime;
+                        document.getElementById('major-time').textContent = updateTime;
+                    }
+                    
+                } else {
+                    const errorText = await response.text();
+                    updateStatus(`❌ Function failed: ${response.status}`, 'error');
+                    rawOutput.textContent = `Error ${response.status}:\n${errorText}`;
+                }
+            } catch (error) {
+                updateStatus(`❌ Network error: ${error.message}`, 'error');
+                rawOutput.textContent = `Network Error:\n${error.message}`;
+            }
+        });
+
+        // Test matches endpoint (alias)
+        document.getElementById('testMatches').addEventListener('click', () => {
+            document.getElementById('triggerUpdate').click();
+        });
+
+        // Refresh data preview
+        document.getElementById('refreshData').addEventListener('click', async () => {
+            updateStatus('🔄 Refreshing data preview...', 'info');
+            
+            try {
+                const response = await fetch('/.netlify/functions/daily-update');
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    if (data.data) {
+                        document.getElementById('yesterday-count').textContent = data.data.yesterday?.count || 0;
+                        document.getElementById('today-count').textContent = data.data.today?.count || 0;
+                        document.getElementById('tomorrow-count').textContent = data.data.tomorrow?.count || 0;
+                        document.getElementById('major-count').textContent = data.data.major?.count || 0;
+                        
+                        const updateTime = new Date(data.lastUpdate).toLocaleTimeString();
+                        document.getElementById('yesterday-time').textContent = updateTime;
+                        document.getElementById('today-time').textContent = updateTime;
+                        document.getElementById('tomorrow-time').textContent = updateTime;
+                        document.getElementById('major-time').textContent = updateTime;
+                        
+                        updateStatus('✅ Data preview refreshed', 'success');
+                    }
+                }
+            } catch (error) {
+                updateStatus(`❌ Refresh failed: ${error.message}`, 'error');
+            }
+        });
+
+        // Auto-refresh data on page load
+        window.addEventListener('load', () => {
+            updateStatus('🎯 Admin panel loaded - Ready for testing!', 'success');
+            document.getElementById('refreshData').click();
+        });
+    </script>
+</body>
+</html>
