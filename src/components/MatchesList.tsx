@@ -238,36 +238,36 @@ function MatchCard({ match, isLive }: MatchCardProps) {
       </div>
 
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-3 flex-1 min-w-0">
           <img 
             src={match.teams.home.logo} 
             alt={match.teams.home.name}
-            className="w-8 h-8 object-contain"
+            className="w-8 h-8 object-contain flex-shrink-0"
             onError={(e) => {
               (e.target as HTMLImageElement).src = '/placeholder-team.png';
             }}
           />
-          <span className="font-medium text-sm">{match.teams.home.name}</span>
+          <span className="font-medium text-sm truncate">{match.teams.home.name}</span>
         </div>
         
-        <div className="text-center px-4">
+        <div className="text-center px-4 flex-shrink-0 min-w-[80px]">
           {match.goals.home !== null && match.goals.away !== null ? (
-            <div className="text-xl font-bold text-gray-900">
+            <div className="text-xl font-bold text-gray-900 whitespace-nowrap">
               {match.goals.home} - {match.goals.away}
             </div>
           ) : (
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-gray-600 whitespace-nowrap">
               {formatTime(match.fixture.timestamp)}
             </div>
           )}
         </div>
 
-        <div className="flex items-center space-x-3">
-          <span className="font-medium text-sm">{match.teams.away.name}</span>
+        <div className="flex items-center space-x-3 flex-1 min-w-0 justify-end">
+          <span className="font-medium text-sm truncate">{match.teams.away.name}</span>
           <img 
             src={match.teams.away.logo} 
             alt={match.teams.away.name}
-            className="w-8 h-8 object-contain"
+            className="w-8 h-8 object-contain flex-shrink-0"
             onError={(e) => {
               (e.target as HTMLImageElement).src = '/placeholder-team.png';
             }}
