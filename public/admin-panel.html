@@ -169,7 +169,7 @@ Click "Force Data Update" to see raw JSON response...
             updateStatus('🚀 Triggering daily update function...', 'info');
             
             try {
-                const response = await fetch('/.netlify/functions/daily-update', {
+                const response = await fetch('/.netlify/functions/simple-update', {
                     method: 'GET'
                 });
                 
@@ -180,12 +180,12 @@ Click "Force Data Update" to see raw JSON response...
                     // Display raw output
                     rawOutput.textContent = JSON.stringify(data, null, 2);
                     
-                    // Update preview if data available
-                    if (data.data) {
-                        document.getElementById('yesterday-count').textContent = data.data.yesterday?.count || 0;
-                        document.getElementById('today-count').textContent = data.data.today?.count || 0;
-                        document.getElementById('tomorrow-count').textContent = data.data.tomorrow?.count || 0;
-                        document.getElementById('major-count').textContent = data.data.major?.count || 0;
+                    // Update preview with simplified data
+                    if (data.success) {
+                        document.getElementById('yesterday-count').textContent = '-';
+                        document.getElementById('today-count').textContent = data.todayMatches || 0;
+                        document.getElementById('tomorrow-count').textContent = '-';
+                        document.getElementById('major-count').textContent = '-';
                         
                         const updateTime = new Date(data.lastUpdate).toLocaleTimeString();
                         document.getElementById('yesterday-time').textContent = updateTime;
