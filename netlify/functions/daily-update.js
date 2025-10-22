@@ -1,6 +1,9 @@
 const API_KEY = process.env.FOOTBALL_DATA_API_KEY;
 const API_BASE = 'https://api.football-data.org/v4';
 
+// Import fetch for Node.js environment
+const fetch = require('node-fetch');
+
 // Cache object to store data in memory
 let dataCache = {
   lastUpdate: null,
@@ -101,6 +104,7 @@ exports.handler = async (event, context) => {
     };
   }
   
+  
   try {
     const today = new Date().toISOString().split('T')[0];
     const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -108,27 +112,50 @@ exports.handler = async (event, context) => {
     
     console.log(`📅 Fetching matches for: ${yesterday} | ${today} | ${tomorrow}`);
     
-    // Fetch all match data
-    const [yesterdayData, todayData, tomorrowData] = await Promise.all([
-      fetchMatchData(`/matches?dateFrom=${yesterday}&dateTo=${yesterday}`),
-      fetchMatchData(`/matches?dateFrom=${today}&dateTo=${today}`),
-      fetchMatchData(`/matches?dateFrom=${tomorrow}&dateTo=${tomorrow}`)
-    ]);
+    // Test a simple API call first
+    console.log('🧪 Testing basic API connectivity...');
+    const testResponse = await fetch(`${API_BASE}/competitions`, {
+      headers: { 'X-Auth-Token': API_KEY }
+    });
     
-    // Major competitions data
+    if (!testResponse.ok) {
+      throw new Error(`API test failed: ${testResponse.status} ${testResponse.statusText}`);
+    }
+    
+    console.log('✅ API connectivity test passed');
+    
+    // Fetch all match data with individual error handling
+    console.log('📡 Fetching yesterday matches...');
+    const yesterdayData = await fetchMatchData(`/matches?dateFrom=${yesterday}&dateTo=${yesterday}`);
+    console.log(`✅ Yesterday: ${yesterdayData.matches?.length || 0} matches`);
+    
+    console.log('📡 Fetching today matches...');
+    const todayData = await fetchMatchData(`/matches?dateFrom=${today}&dateTo=${today}`);
+    console.log(`✅ Today: ${todayData.matches?.length || 0} matches`);
+    
+    console.log('📡 Fetching tomorrow matches...');
+    const tomorrowData = await fetchMatchData(`/matches?dateFrom=${tomorrow}&dateTo=${tomorrow}`);
+    console.log(`✅ Tomorrow: ${tomorrowData.matches?.length || 0} matches`);
+    
+    // Major competitions data with individual handling
+    console.log('🏆 Fetching major competitions...');
     const competitions = ['PL', 'CL', 'EL', 'SA', 'PD', 'BL1', 'FL1'];
     const majorMatches = [];
     
     for (const comp of competitions) {
       try {
+        console.log(`📡 Fetching ${comp}...`);
         const compData = await fetchMatchData(`/competitions/${comp}/matches?dateFrom=${yesterday}&dateTo=${tomorrow}`);
         if (compData.matches) {
           majorMatches.push(...compData.matches);
+          console.log(`✅ ${comp}: ${compData.matches.length} matches`);
         }
       } catch (error) {
-        console.log(`⚠️ Failed to fetch ${comp}:`, error.message);
+        console.log(`⚠️ Failed to fetch ${comp}: ${error.message}`);
       }
     }
+    
+    console.log(`🏆 Total major matches: ${majorMatches.length}`);
     
     // Update cache
     dataCache = {
