@@ -31,13 +31,15 @@ exports.handler = async (event, context) => {
     }
 
     const today = new Date().toISOString().split('T')[0];
-    console.log(`📅 Fetching matches for: ${today}`);
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    console.log(`📅 Fetching matches for: ${yesterday} to ${tomorrow}`);
     
-    // Single API call with timeout
+    // Fetch matches for a 3-day window to get more data
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
     
-    const response = await fetch(`${API_BASE}/matches?dateFrom=${today}&dateTo=${today}`, {
+    const response = await fetch(`${API_BASE}/matches?dateFrom=${yesterday}&dateTo=${tomorrow}`, {
       headers: { 
         'X-Auth-Token': API_KEY,
         'User-Agent': 'YallaFoot/1.0'
@@ -61,7 +63,21 @@ exports.handler = async (event, context) => {
     }
     
     const data = await response.json();
-    console.log(`✅ Fetched ${data.matches?.length || 0} matches for today`);
+    const allMatches = data.matches || [];
+    
+    // Separate matches by day
+    const todayMatches = allMatches.filter(match => match.utcDate.split('T')[0] === today);
+    const yesterdayMatches = allMatches.filter(match => match.utcDate.split('T')[0] === yesterday);
+    const tomorrowMatches = allMatches.filter(match => match.utcDate.split('T')[0] === tomorrow);
+    
+    console.log(`✅ Fetched ${allMatches.length} total matches`);
+    console.log(`📊 Yesterday: ${yesterdayMatches.length}, Today: ${todayMatches.length}, Tomorrow: ${tomorrowMatches.length}`);
+    
+    // Get a sample match from any day
+    const sampleMatch = allMatches[0];
+    const sampleMatchInfo = sampleMatch ? 
+      `${sampleMatch.homeTeam.name} vs ${sampleMatch.awayTeam.name}` : 
+      'No matches found';
     
     return {
       statusCode: 200,
@@ -69,10 +85,14 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({
         success: true,
         message: 'Daily update completed successfully!',
-        todayMatches: data.matches?.length || 0,
-        sampleMatch: data.matches?.[0]?.homeTeam?.name || 'No matches',
+        totalMatches: allMatches.length,
+        todayMatches: todayMatches.length,
+        yesterdayMatches: yesterdayMatches.length,
+        tomorrowMatches: tomorrowMatches.length,
+        sampleMatch: sampleMatchInfo,
         lastUpdate: new Date().toISOString(),
-        date: today
+        dateRange: `${yesterday} to ${tomorrow}`,
+        dates: { yesterday, today, tomorrow }
       })
     };
     

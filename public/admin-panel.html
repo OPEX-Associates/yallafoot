@@ -182,10 +182,10 @@ Click "Force Data Update" to see raw JSON response...
                     
                     // Update preview with simplified data
                     if (data.success) {
-                        document.getElementById('yesterday-count').textContent = '-';
+                        document.getElementById('yesterday-count').textContent = data.yesterdayMatches || 0;
                         document.getElementById('today-count').textContent = data.todayMatches || 0;
-                        document.getElementById('tomorrow-count').textContent = '-';
-                        document.getElementById('major-count').textContent = '-';
+                        document.getElementById('tomorrow-count').textContent = data.tomorrowMatches || 0;
+                        document.getElementById('major-count').textContent = data.totalMatches || 0;
                         
                         const updateTime = new Date(data.lastUpdate).toLocaleTimeString();
                         document.getElementById('yesterday-time').textContent = updateTime;
@@ -224,24 +224,37 @@ Click "Force Data Update" to see raw JSON response...
             updateStatus('🔄 Refreshing data preview...', 'info');
             
             try {
-                const response = await fetch('/.netlify/functions/daily-update');
+                const response = await fetch('/.netlify/functions/simple-update');
                 if (response.ok) {
                     const data = await response.json();
                     
-                    if (data.data) {
-                        document.getElementById('yesterday-count').textContent = data.data.yesterday?.count || 0;
-                        document.getElementById('today-count').textContent = data.data.today?.count || 0;
-                        document.getElementById('tomorrow-count').textContent = data.data.tomorrow?.count || 0;
-                        document.getElementById('major-count').textContent = data.data.major?.count || 0;
+                    if (data.success) {
+                        // Update with enhanced simple-update data structure
+                        document.getElementById('yesterday-count').textContent = data.yesterdayMatches || 0;
+                        document.getElementById('today-count').textContent = data.todayMatches || 0;
+                        document.getElementById('tomorrow-count').textContent = data.tomorrowMatches || 0;
+                        document.getElementById('major-count').textContent = data.totalMatches || 0;
                         
                         const updateTime = new Date(data.lastUpdate).toLocaleTimeString();
-                        document.getElementById('yesterday-time').textContent = updateTime;
                         document.getElementById('today-time').textContent = updateTime;
+                        document.getElementById('yesterday-time').textContent = updateTime;
                         document.getElementById('tomorrow-time').textContent = updateTime;
-                        document.getElementById('major-time').textContent = updateTime;
+                        document.getElementById('major-time').textContent = `Total (${updateTime})`;
                         
-                        updateStatus('✅ Data preview refreshed', 'success');
+                        updateStatus(`✅ Data refreshed - ${data.totalMatches} total matches found`, 'success');
+                        
+                        // Show detailed breakdown
+                        if (data.totalMatches > 0) {
+                            updateStatus(`📊 Breakdown: Yesterday(${data.yesterdayMatches}) Today(${data.todayMatches}) Tomorrow(${data.tomorrowMatches})`, 'info');
+                            updateStatus(`🏈 Sample: ${data.sampleMatch}`, 'info');
+                        } else {
+                            updateStatus('ℹ️ No matches found in the 3-day window. Try checking major competitions.', 'info');
+                        }
+                    } else {
+                        updateStatus(`❌ API Error: ${data.error}`, 'error');
                     }
+                } else {
+                    updateStatus(`❌ HTTP Error: ${response.status}`, 'error');
                 }
             } catch (error) {
                 updateStatus(`❌ Refresh failed: ${error.message}`, 'error');
@@ -251,7 +264,8 @@ Click "Force Data Update" to see raw JSON response...
         // Auto-refresh data on page load
         window.addEventListener('load', () => {
             updateStatus('🎯 Admin panel loaded - Ready for testing!', 'success');
-            document.getElementById('refreshData').click();
+            // Don't auto-refresh to avoid errors on load
+            updateStatus('💡 Click "Refresh Preview" to test the API', 'info');
         });
     </script>
 </body>
