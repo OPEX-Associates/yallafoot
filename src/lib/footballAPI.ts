@@ -29,10 +29,10 @@ export class FootballAPI {
     try {
       console.log('� Loading yesterday matches from daily data...');
       
-      const response = await fetch('/data/matches-yesterday.json');
+      const response = await fetch('/.netlify/functions/matches?type=yesterday');
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Yesterday matches from daily data:', data.count, `(updated: ${data.lastUpdated})`);
+        console.log('✅ Yesterday matches from API:', data.count);
         
         if (data.matches && data.matches.length > 0) {
           return this.transformFootballDataMatches(data.matches);
@@ -52,10 +52,10 @@ export class FootballAPI {
     try {
       console.log('� Loading today matches from daily data...');
       
-      const response = await fetch('/data/matches-today.json');
+      const response = await fetch('/.netlify/functions/matches?type=today');
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Today matches from daily data:', data.count, `(updated: ${data.lastUpdated})`);
+        console.log('✅ Today matches from API:', data.count);
         
         if (data.matches && data.matches.length > 0) {
           return this.transformFootballDataMatches(data.matches);
@@ -75,10 +75,10 @@ export class FootballAPI {
     try {
       console.log('� Loading tomorrow matches from daily data...');
       
-      const response = await fetch('/data/matches-tomorrow.json');
+      const response = await fetch('/.netlify/functions/matches?type=tomorrow');
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Tomorrow matches from daily data:', data.count, `(updated: ${data.lastUpdated})`);
+        console.log('✅ Tomorrow matches from API:', data.count);
         
         if (data.matches && data.matches.length > 0) {
           return this.transformFootballDataMatches(data.matches);
@@ -99,10 +99,10 @@ export class FootballAPI {
     try {
       console.log('🏆 Loading major competition matches from daily data...');
       
-      const response = await fetch('/data/matches-major.json');
+      const response = await fetch('/.netlify/functions/matches?type=major');
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Major competition matches from daily data:', data.count, `(updated: ${data.lastUpdated})`);
+        console.log('✅ Major competition matches from API:', data.count);
         
         if (data.matches && data.matches.length > 0) {
           return this.transformFootballDataMatches(data.matches);
