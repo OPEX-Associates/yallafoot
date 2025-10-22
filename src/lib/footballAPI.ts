@@ -39,12 +39,11 @@ export class FootballAPI {
         }
       }
       
-      console.log('📦 No daily data available, using mock data');
-      return this.getMockYesterdayMatches();
+      console.log('📦 No matches found for yesterday');
+      return [];
     } catch (error) {
       console.error('❌ Error loading yesterday matches:', error);
-      console.log('📦 Using mock data as fallback');
-      return this.getMockYesterdayMatches();
+      return [];
     }
   }
 
@@ -62,12 +61,11 @@ export class FootballAPI {
         }
       }
       
-      console.log('📦 No daily data available, using mock data');
-      return this.getMockTodayMatches();
+      console.log('📦 No matches found for today');
+      return [];
     } catch (error) {
       console.error('❌ Error loading today matches:', error);
-      console.log('📦 Using mock data as fallback');
-      return this.getMockTodayMatches();
+      return [];
     }
   }
 
@@ -85,12 +83,11 @@ export class FootballAPI {
         }
       }
       
-      console.log('📦 No daily data available, using mock data');
-      return this.getMockTomorrowMatches();
+      console.log('📦 No matches found for tomorrow');
+      return [];
     } catch (error) {
       console.error('❌ Error loading tomorrow matches:', error);
-      console.log('📦 Using mock data as fallback');
-      return this.getMockTomorrowMatches();
+      return [];
     }
   }
 
@@ -109,21 +106,11 @@ export class FootballAPI {
         }
       }
       
-      console.log('📦 No daily data available, using mock data');
-      // Combine different mock data to simulate major competitions
-      const yesterday = this.getMockYesterdayMatches();
-      const today = this.getMockTodayMatches();
-      const tomorrow = this.getMockTomorrowMatches();
-      return [...yesterday, ...today, ...tomorrow];
+      console.log('📦 No major competition matches found');
+      return [];
     } catch (error) {
       console.error('❌ Error loading major competition matches:', error);
-      console.log('📦 Using mock data as fallback');
-      
-      // Combine different mock data to simulate major competitions
-      const yesterday = this.getMockYesterdayMatches();
-      const today = this.getMockTodayMatches();
-      const tomorrow = this.getMockTomorrowMatches();
-      return [...yesterday, ...today, ...tomorrow];
+      return [];
     }
   }
 
@@ -135,8 +122,8 @@ export class FootballAPI {
       );
       
       if (!response.ok) {
-        console.warn('API request failed, using mock data');
-        return this.getMockMatchWithStreams(matchId);
+        console.warn('API request failed');
+        return null;
       }
       
       const data = await response.json();
@@ -155,7 +142,7 @@ export class FootballAPI {
       };
     } catch (error) {
       console.error('Error fetching match:', error);
-      return this.getMockMatchWithStreams(matchId);
+      return null;
     }
   }
 
