@@ -71,17 +71,31 @@ exports.handler = async (event, context) => {
   }
 
   if (forceUpdate) {
-    console.log('� MANUAL TRIGGER: Force updating cache...');
+    console.log('🔧 MANUAL TRIGGER: Force updating cache...');
   } else {
-    console.log('�🚀 Fetching fresh match data...');
+    console.log(' Fetching fresh match data...');
   }
+
+  // Debug: Log environment and request info
+  console.log('🔍 Debug Info:');
+  console.log('- API Key present:', !!API_KEY);
+  console.log('- API Key length:', API_KEY ? API_KEY.length : 0);
+  console.log('- API Key preview:', API_KEY ? API_KEY.substring(0, 10) + '...' : 'MISSING');
+  console.log('- Event method:', event.httpMethod);
+  console.log('- Query params:', event.queryStringParameters);
   
   if (!API_KEY) {
+    console.error('❌ CRITICAL: API_KEY environment variable not set');
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({
-        error: 'Missing API key',
+        error: 'API key not configured',
+        debug: {
+          envVarName: 'FOOTBALL_DATA_API_KEY',
+          present: false,
+          message: 'Set this environment variable in Netlify dashboard: Site Settings > Environment Variables'
+        },
         fallback: true
       })
     };

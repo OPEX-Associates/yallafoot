@@ -21,17 +21,33 @@
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <button 
+                        id="debugInfo" 
+                        class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+                    >
+                        🔍 Debug Environment
+                    </button>
+                    
+                    <button 
                         id="triggerUpdate" 
                         class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
                     >
                         🚀 Force Data Update
                     </button>
-                    
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <button 
                         id="testMatches" 
                         class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
                     >
                         🏈 Test Matches API
+                    </button>
+                    
+                    <button 
+                        id="checkLogs" 
+                        class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+                    >
+                        📋 Check Function Logs
                     </button>
                 </div>
 
@@ -116,6 +132,38 @@ Click "Force Data Update" to see raw JSON response...
             `;
         }
 
+        // Debug environment info
+        document.getElementById('debugInfo').addEventListener('click', async () => {
+            updateStatus('🔍 Checking environment and debug info...', 'info');
+            
+            try {
+                const response = await fetch('/.netlify/functions/debug');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    updateStatus('✅ Debug info retrieved!', 'success');
+                    
+                    // Display debug output
+                    rawOutput.textContent = JSON.stringify(data, null, 2);
+                    
+                    // Show key info in status
+                    if (data.environment) {
+                        const env = data.environment;
+                        updateStatus(`🔑 API Key: ${env.hasFootballDataKey ? '✅ Present' : '❌ Missing'} (Length: ${env.footballDataKeyLength})`, env.hasFootballDataKey ? 'success' : 'error');
+                        updateStatus(`🌍 Environment: Node ${env.nodeVersion} on ${env.platform}`, 'info');
+                    }
+                    
+                } else {
+                    const errorText = await response.text();
+                    updateStatus(`❌ Debug failed: ${response.status}`, 'error');
+                    rawOutput.textContent = `Debug Error ${response.status}:\n${errorText}`;
+                }
+            } catch (error) {
+                updateStatus(`❌ Debug error: ${error.message}`, 'error');
+                rawOutput.textContent = `Debug Network Error:\n${error.message}`;
+            }
+        });
+
         // Force trigger the daily update function
         document.getElementById('triggerUpdate').addEventListener('click', async () => {
             updateStatus('🚀 Triggering daily update function...', 'info');
@@ -160,6 +208,15 @@ Click "Force Data Update" to see raw JSON response...
         // Test matches endpoint (alias)
         document.getElementById('testMatches').addEventListener('click', () => {
             document.getElementById('triggerUpdate').click();
+        });
+
+        // Check function logs (instruction)
+        document.getElementById('checkLogs').addEventListener('click', () => {
+            updateStatus('📋 To view function logs:', 'info');
+            updateStatus('1. Go to Netlify Dashboard → Functions', 'info');
+            updateStatus('2. Click on "daily-update" function', 'info');
+            updateStatus('3. View real-time logs and execution details', 'info');
+            updateStatus('4. Look for console.log outputs and error messages', 'warning');
         });
 
         // Refresh data preview
