@@ -1,12 +1,14 @@
-const fetch = require('node-fetch');
-
 const API_KEY = process.env.FOOTBALL_DATA_API_KEY;
 const API_BASE = 'https://api.football-data.org/v4';
 
-// GitHub API to update files in the repository
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-const GITHUB_REPO = process.env.GITHUB_REPO; // format: "username/repo-name"
-const GITHUB_API = 'https://api.github.com';
+// Cache object to store data in memory
+let dataCache = {
+  lastUpdate: null,
+  yesterday: { matches: [], count: 0 },
+  today: { matches: [], count: 0 },
+  tomorrow: { matches: [], count: 0 },
+  major: { matches: [], count: 0 }
+};
 
 async function fetchMatchData(endpoint) {
   const response = await fetch(`${API_BASE}${endpoint}`, {
@@ -20,50 +22,55 @@ async function fetchMatchData(endpoint) {
   return response.json();
 }
 
-async function updateGitHubFile(path, content, message) {
-  // Get current file (to get SHA for update)
-  const getUrl = `${GITHUB_API}/repos/${GITHUB_REPO}/contents/${path}`;
+function shouldUpdateCache() {
+  if (!dataCache.lastUpdate) return true;
   
-  try {
-    const existingResponse = await fetch(getUrl, {
-      headers: { 'Authorization': `token ${GITHUB_TOKEN}` }
-    });
-    
-    const existingData = existingResponse.ok ? await existingResponse.json() : null;
-    
-    // Update or create file
-    const updateUrl = `${GITHUB_API}/repos/${GITHUB_REPO}/contents/${path}`;
-    const updateData = {
-      message,
-      content: Buffer.from(JSON.stringify(content, null, 2)).toString('base64'),
-      ...(existingData?.sha && { sha: existingData.sha })
-    };
-    
-    const updateResponse = await fetch(updateUrl, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `token ${GITHUB_TOKEN}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(updateData)
-    });
-    
-    return updateResponse.ok;
-  } catch (error) {
-    console.error(`Failed to update ${path}:`, error);
-    return false;
-  }
+  const now = new Date();
+  const lastUpdate = new Date(dataCache.lastUpdate);
+  const hoursSinceUpdate = (now - lastUpdate) / (1000 * 60 * 60);
+  
+  // Update if more than 6 hours old
+  return hoursSinceUpdate > 6;
 }
 
 exports.handler = async (event, context) => {
-  console.log('🚀 Starting daily match data update...');
+  // Enable CORS
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Content-Type': 'application/json',
+    'Cache-Control': 'public, max-age=21600' // Cache for 6 hours
+  };
+
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers, body: '' };
+  }
+
+  // Check if we need to update cache
+  if (!shouldUpdateCache()) {
+    console.log('� Serving cached data');
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        success: true,
+        cached: true,
+        lastUpdate: dataCache.lastUpdate,
+        data: dataCache
+      })
+    };
+  }
+
+  console.log('🚀 Fetching fresh match data...');
   
-  if (!API_KEY || !GITHUB_TOKEN || !GITHUB_REPO) {
+  if (!API_KEY) {
     return {
       statusCode: 500,
+      headers,
       body: JSON.stringify({
-        error: 'Missing required environment variables',
-        required: ['FOOTBALL_DATA_API_KEY', 'GITHUB_TOKEN', 'GITHUB_REPO']
+        error: 'Missing API key',
+        fallback: true
       })
     };
   }
@@ -97,73 +104,59 @@ exports.handler = async (event, context) => {
       }
     }
     
-    // Prepare data files
-    const dataFiles = {
-      'data/matches-yesterday.json': {
+    // Update cache
+    dataCache = {
+      lastUpdate: new Date().toISOString(),
+      yesterday: {
         matches: yesterdayData.matches || [],
         count: yesterdayData.matches?.length || 0,
-        date: yesterday,
-        lastUpdated: new Date().toISOString()
+        date: yesterday
       },
-      'data/matches-today.json': {
+      today: {
         matches: todayData.matches || [],
         count: todayData.matches?.length || 0,
-        date: today,
-        lastUpdated: new Date().toISOString()
+        date: today
       },
-      'data/matches-tomorrow.json': {
+      tomorrow: {
         matches: tomorrowData.matches || [],
         count: tomorrowData.matches?.length || 0,
-        date: tomorrow,
-        lastUpdated: new Date().toISOString()
+        date: tomorrow
       },
-      'data/matches-major.json': {
+      major: {
         matches: majorMatches,
         count: majorMatches.length,
-        dateRange: `${yesterday} to ${tomorrow}`,
-        lastUpdated: new Date().toISOString()
+        dateRange: `${yesterday} to ${tomorrow}`
       }
     };
     
-    // Update all data files
-    const results = await Promise.all(
-      Object.entries(dataFiles).map(([path, content]) =>
-        updateGitHubFile(path, content, `Auto-update match data: ${today}`)
-      )
-    );
-    
-    const successful = results.filter(Boolean).length;
-    
-    console.log(`✅ Updated ${successful}/${results.length} data files`);
+    console.log(`✅ Cache updated successfully`);
     console.log(`📊 Data summary:`);
-    console.log(`  Yesterday: ${yesterdayData.matches?.length || 0} matches`);
-    console.log(`  Today: ${todayData.matches?.length || 0} matches`);
-    console.log(`  Tomorrow: ${tomorrowData.matches?.length || 0} matches`);
-    console.log(`  Major competitions: ${majorMatches.length} matches`);
+    console.log(`  Yesterday: ${dataCache.yesterday.count} matches`);
+    console.log(`  Today: ${dataCache.today.count} matches`);
+    console.log(`  Tomorrow: ${dataCache.tomorrow.count} matches`);
+    console.log(`  Major competitions: ${dataCache.major.count} matches`);
     
     return {
       statusCode: 200,
+      headers,
       body: JSON.stringify({
         success: true,
-        updated: successful,
-        total: results.length,
-        summary: {
-          yesterday: yesterdayData.matches?.length || 0,
-          today: todayData.matches?.length || 0,
-          tomorrow: tomorrowData.matches?.length || 0,
-          major: majorMatches.length
-        }
+        cached: false,
+        lastUpdate: dataCache.lastUpdate,
+        data: dataCache
       })
     };
     
   } catch (error) {
-    console.error('❌ Error in daily update:', error);
+    console.error('❌ Error fetching data:', error);
     
     return {
       statusCode: 500,
+      headers,
       body: JSON.stringify({
-        error: 'Daily update failed',
-        details: error.message
+        error: 'Failed to fetch match data',
+        details: error.message,
+        fallback: true
       })
     };
   }
