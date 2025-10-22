@@ -2,7 +2,7 @@ const API_KEY = process.env.FOOTBALL_DATA_API_KEY;
 const API_BASE = 'https://api.football-data.org/v4';
 
 // Import fetch for Node.js environment
-const fetch = require('node-fetch');
+// Using built-in fetch API (Node.js 18+)
 
 // Cache object to store data in memory
 let dataCache = {
