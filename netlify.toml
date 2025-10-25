@@ -8,7 +8,7 @@
   NEXT_PUBLIC_PHP_API_KEY = "yf_prod_b5f603e5da167f0e69f3902b644f66171c3197f34426fe9b3217c11375f354ca"
   NEXT_PUBLIC_ENVIRONMENT = "production"
 
-# Note: Netlify Functions are now replaced by PHP API
+# Note: Using static export, no Netlify Next.js plugin needed
 # The functions directory is kept for reference but won't be used
 
 [[headers]]
@@ -54,13 +54,8 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-# Cache for daily data files (1 hour)
-[[headers]]
-  for = "/data/*"
-  [headers.values]
-    Cache-Control = "public, max-age=3600"
-
+# SPA fallback for client-side routing
 [[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
+  from = "/*"
+  to = "/index.html"
   status = 200
