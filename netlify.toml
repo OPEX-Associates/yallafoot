@@ -11,6 +11,13 @@
 # Note: Using static export, no Netlify Next.js plugin needed
 # The functions directory is kept for reference but won't be used
 
+# Explicitly allow these environment variables (they're intentionally public)
+# The PHP API provides the security layer with authentication and rate limiting
+[context.production.environment]
+  NEXT_PUBLIC_PHP_API_BASE = "https://football.opex.associates/api"
+  NEXT_PUBLIC_PHP_API_KEY = "yf_prod_b5f603e5da167f0e69f3902b644f66171c3197f34426fe9b3217c11375f354ca"
+  NEXT_PUBLIC_ENVIRONMENT = "production"
+
 [[headers]]
   for = "/*"
   [headers.values]
