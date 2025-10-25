@@ -60,20 +60,11 @@ export function useCachedMatches(options: UseCachedMatchesOptions = {}) {
     try {
       setError(null);
       
-      // Use the PHP API instead of Netlify functions
-      const PHP_API_BASE = process.env.NEXT_PUBLIC_PHP_API_BASE || 'https://football.opex.associates/api';
-      const PHP_API_KEY = process.env.NEXT_PUBLIC_PHP_API_KEY || 'yf_prod_b5f603e5da167f0e69f3902b644f66171c3197f34426fe9b3217c11375f354ca';
-      
-      const params = new URLSearchParams();
-      params.append('endpoint', 'matches');
-      params.append('type', type);
-      
-      const response = await fetch(`${PHP_API_BASE}/index.php?${params.toString()}`, {
+      // Use Netlify proxy function to avoid CORS issues
+      const response = await fetch(`/api/php-proxy?type=${type}`, {
         cache: 'no-store', // Always get fresh data
         headers: {
-          'X-API-Key': PHP_API_KEY,
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache'
+          'Content-Type': 'application/json'
         }
       });
 
@@ -81,19 +72,7 @@ export function useCachedMatches(options: UseCachedMatchesOptions = {}) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      // Clean response to handle PHP errors/warnings
-      const responseText = await response.text();
-      const cleanJsonText = responseText
-        .replace(/<br\s*\/?>/gi, '')
-        .replace(/<b>.*?<\/b>/gi, '')
-        .replace(/Warning:.*?on line.*?\n/gi, '')
-        .replace(/Notice:.*?on line.*?\n/gi, '')
-        .trim();
-      
-      const jsonStart = cleanJsonText.indexOf('{');
-      const actualJson = jsonStart >= 0 ? cleanJsonText.substring(jsonStart) : cleanJsonText;
-      
-      const result = JSON.parse(actualJson);
+      const result = await response.json();
       
       if (isActiveRef.current && result.success) {
         // Transform PHP API response to match expected format
@@ -128,7 +107,7 @@ export function useCachedMatches(options: UseCachedMatchesOptions = {}) {
             total: result.meta?.total || 0,
             live: result.meta?.live || 0,
             lastUpdate: new Date().toISOString(),
-            notice: 'Data from YallaFoot PHP API',
+            notice: 'Data from YallaFoot PHP API via proxy',
             ageMinutes: Math.floor((result.meta?.cache_info?.age_minutes || 0)),
             requestsToday: result.meta?.api_usage?.requests_today || 0,
             freeApiMode: true
@@ -140,7 +119,7 @@ export function useCachedMatches(options: UseCachedMatchesOptions = {}) {
         setLoading(false);
         
         // Log for debugging
-        console.log(`📦 PHP API: ${transformedData.meta.total} matches, ${transformedData.meta.live} live`);
+        console.log(`📦 PHP API (proxied): ${transformedData.meta.total} matches, ${transformedData.meta.live} live`);
       }
     } catch (err) {
       if (isActiveRef.current) {

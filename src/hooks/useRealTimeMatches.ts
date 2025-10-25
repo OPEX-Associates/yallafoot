@@ -54,20 +54,11 @@ export function useRealTimeMatches(options: UseRealTimeMatchesOptions = {}) {
     try {
       setError(null);
       
-      // Use the PHP API instead of Netlify functions
-      const PHP_API_BASE = process.env.NEXT_PUBLIC_PHP_API_BASE || 'https://football.opex.associates/api';
-      const PHP_API_KEY = process.env.NEXT_PUBLIC_PHP_API_KEY || 'yf_prod_b5f603e5da167f0e69f3902b644f66171c3197f34426fe9b3217c11375f354ca';
-      
-      const params = new URLSearchParams();
-      params.append('endpoint', 'matches');
-      params.append('type', type);
-      
-      const response = await fetch(`${PHP_API_BASE}/index.php?${params.toString()}`, {
+      // Use Netlify proxy function to avoid CORS issues
+      const response = await fetch(`/api/php-proxy?type=${type}`, {
         cache: 'no-store', // Always get fresh data for live scores
         headers: {
-          'X-API-Key': PHP_API_KEY,
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache'
+          'Content-Type': 'application/json'
         }
       });
 
@@ -75,22 +66,7 @@ export function useRealTimeMatches(options: UseRealTimeMatchesOptions = {}) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      // Get response text first to clean it
-      const responseText = await response.text();
-      
-      // Remove any PHP error/warning HTML output that might corrupt JSON
-      const cleanJsonText = responseText
-        .replace(/<br\s*\/?>/gi, '') // Remove <br> tags
-        .replace(/<b>.*?<\/b>/gi, '') // Remove <b> tags and content
-        .replace(/Warning:.*?on line.*?\n/gi, '') // Remove PHP warnings
-        .replace(/Notice:.*?on line.*?\n/gi, '') // Remove PHP notices
-        .trim();
-      
-      // Find the start of actual JSON (look for opening brace)
-      const jsonStart = cleanJsonText.indexOf('{');
-      const actualJson = jsonStart >= 0 ? cleanJsonText.substring(jsonStart) : cleanJsonText;
-      
-      const result = JSON.parse(actualJson);
+      const result = await response.json();
       
       if (isActiveRef.current && result.success) {
         // Transform PHP API response to match expected format
