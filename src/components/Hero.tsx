@@ -16,13 +16,13 @@ export default function Hero() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              href="/matches/"
+              href="/matches"
               className="bg-yellow-400 text-gray-900 px-8 py-3 rounded-lg font-semibold hover:bg-yellow-300 transition-colors"
             >
               Browse Live Matches
             </Link>
             <Link
-              href="/reviews/"
+              href="/reviews"
               className="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-gray-900 transition-colors"
             >
               Read Reviews

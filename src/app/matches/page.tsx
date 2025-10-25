@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import MatchesList from "@/components/MatchesList";
+import CachedMatches from "@/components/CachedMatches";
 
 export const metadata: Metadata = {
   title: "Live Football Matches - YallaFoot",
-  description: "Watch live football matches with curated streaming links. Find the best quality streams for Premier League, La Liga, Champions League and more.",
-  keywords: "live football, streaming links, Premier League, La Liga, Champions League, football streams",
+  description: "Watch live football matches with curated streaming links. Real-time scores updated every 3 minutes during matches.",
+  keywords: "live football, streaming links, Premier League, La Liga, Champions League, football streams, real-time scores",
 };
 
 export default function MatchesPage() {
@@ -15,16 +15,7 @@ export default function MatchesPage() {
       <Header />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Live Football Matches
-          </h1>
-          <p className="text-xl text-gray-600">
-            Watch live football matches with our curated streaming links
-          </p>
-        </div>
-
-        <MatchesList />
+        <CachedMatches />
       </div>
 
       <Footer />

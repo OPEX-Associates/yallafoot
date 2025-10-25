@@ -94,7 +94,7 @@ export default function FeaturedMatches() {
 
         <div className="text-center mt-12">
           <Link
-            href="/matches/"
+            href="/matches"
             className="bg-gray-900 text-white px-8 py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors"
           >
             View All Matches

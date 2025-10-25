@@ -23,13 +23,13 @@ export default function Header() {
               <Link href="/" className="text-gray-900 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium">
                 Home
               </Link>
-              <Link href="/matches/" className="text-gray-900 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium">
+              <Link href="/matches" className="text-gray-900 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium">
                 Live Matches
               </Link>
-              <Link href="/reviews/" className="text-gray-900 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium">
+              <Link href="/reviews" className="text-gray-900 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium">
                 Reviews
               </Link>
-              <Link href="/about/" className="text-gray-900 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium">
+              <Link href="/about" className="text-gray-900 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium">
                 About
               </Link>
             </div>
@@ -62,13 +62,13 @@ export default function Header() {
               <Link href="/" className="text-gray-900 hover:text-primary-600 block px-3 py-2 rounded-md text-base font-medium">
                 Home
               </Link>
-              <Link href="/matches/" className="text-gray-900 hover:text-primary-600 block px-3 py-2 rounded-md text-base font-medium">
+              <Link href="/matches" className="text-gray-900 hover:text-primary-600 block px-3 py-2 rounded-md text-base font-medium">
                 Live Matches
               </Link>
-              <Link href="/reviews/" className="text-gray-900 hover:text-primary-600 block px-3 py-2 rounded-md text-base font-medium">
+              <Link href="/reviews" className="text-gray-900 hover:text-primary-600 block px-3 py-2 rounded-md text-base font-medium">
                 Reviews
               </Link>
-              <Link href="/about/" className="text-gray-900 hover:text-primary-600 block px-3 py-2 rounded-md text-base font-medium">
+              <Link href="/about" className="text-gray-900 hover:text-primary-600 block px-3 py-2 rounded-md text-base font-medium">
                 About
               </Link>
             </div>

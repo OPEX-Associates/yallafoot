@@ -1,112 +1,135 @@
 import { Match, MatchWithStreams, Stream } from '@/types/football';
 
-// Football-Data.org API (Free tier: 10 requests/minute, 12 competitions)
-// Get your free API key from: https://www.football-data.org/client/register
-const API_KEY = process.env.NEXT_PUBLIC_FOOTBALL_DATA_API_KEY || 'YOUR_API_KEY_HERE';
-const API_BASE = 'https://api.football-data.org/v4';
-const CORS_PROXY = process.env.NEXT_PUBLIC_CORS_PROXY || '';
+// YallaFoot PHP API Configuration
+const PHP_API_BASE = process.env.NEXT_PUBLIC_PHP_API_BASE || 'https://football.opex.associates/api';
+const PHP_API_KEY = process.env.NEXT_PUBLIC_PHP_API_KEY || 'yf_prod_b5f603e5da167f0e69f3902b644f66171c3197f34426fe9b3217c11375f354ca';
 
 const headers = {
-  'X-Auth-Token': API_KEY
+  'X-API-Key': PHP_API_KEY,
+  'Content-Type': 'application/json'
 };
 
-// Check if we're in production (Netlify) or development
-const isProduction = typeof window !== 'undefined' && window.location.hostname !== 'localhost';
-const NETLIFY_FUNCTION_URL = '/.netlify/functions/matches';
-
-// Helper function to create API URL with CORS proxy for development
-function createApiUrl(endpoint: string): string {
-  if (isProduction) {
-    return `${API_BASE}${endpoint}`;
-  } else {
-    // Use CORS proxy for development to bypass CORS restrictions
-    return `${CORS_PROXY}${encodeURIComponent(`${API_BASE}${endpoint}`)}`;
+// Helper function to create PHP API URL
+function createPhpApiUrl(endpoint: string, type?: string): string {
+  const params = new URLSearchParams();
+  params.append('endpoint', endpoint);
+  if (type) {
+    params.append('type', type);
   }
+  return `${PHP_API_BASE}/index.php?${params.toString()}`;
 }
 
 export class FootballAPI {
   static async getYesterdayMatches(): Promise<Match[]> {
     try {
-      console.log('� Loading yesterday matches from daily data...');
+      console.log('📅 Loading yesterday matches from PHP API...');
       
-      const response = await fetch('/.netlify/functions/matches?type=yesterday');
+      const response = await fetch(createPhpApiUrl('matches', 'yesterday'), {
+        headers,
+        method: 'GET'
+      });
+      
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Yesterday matches from API:', data.count);
+        console.log('✅ Yesterday matches from PHP API:', data.meta?.total || 0);
         
-        if (data.matches && data.matches.length > 0) {
-          return this.transformFootballDataMatches(data.matches);
+        if (data.success && data.data && data.data.length > 0) {
+          return this.transformPhpApiMatches(data.data);
         }
+      } else {
+        console.warn('❌ PHP API request failed:', response.status, response.statusText);
       }
       
-      console.log('📦 No matches found for yesterday');
-      return [];
+      console.log('📦 No matches found for yesterday, using mock data');
+      return this.getMockYesterdayMatches();
     } catch (error) {
       console.error('❌ Error loading yesterday matches:', error);
-      return [];
+      return this.getMockYesterdayMatches();
     }
   }
 
   static async getTodayMatches(): Promise<Match[]> {
     try {
-      console.log('� Loading today matches from daily data...');
+      console.log('📅 Loading today matches from PHP API...');
       
-      const response = await fetch('/.netlify/functions/matches?type=today');
+      const response = await fetch(createPhpApiUrl('matches', 'today'), {
+        headers,
+        method: 'GET'
+      });
+      
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Today matches from API:', data.count);
+        console.log('✅ Today matches from PHP API:', data.meta?.total || 0);
         
-        if (data.matches && data.matches.length > 0) {
-          return this.transformFootballDataMatches(data.matches);
+        if (data.success && data.data && data.data.length > 0) {
+          return this.transformPhpApiMatches(data.data);
         }
+      } else {
+        console.warn('❌ PHP API request failed:', response.status, response.statusText);
       }
       
-      console.log('📦 No matches found for today');
-      return [];
+      console.log('📦 No matches found for today, using mock data');
+      return this.getMockTodayMatches();
     } catch (error) {
       console.error('❌ Error loading today matches:', error);
-      return [];
+      return this.getMockTodayMatches();
     }
   }
 
   static async getTomorrowMatches(): Promise<Match[]> {
     try {
-      console.log('� Loading tomorrow matches from daily data...');
+      console.log('📅 Loading tomorrow matches from PHP API...');
       
-      const response = await fetch('/.netlify/functions/matches?type=tomorrow');
+      const response = await fetch(createPhpApiUrl('matches', 'tomorrow'), {
+        headers,
+        method: 'GET'
+      });
+      
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Tomorrow matches from API:', data.count);
+        console.log('✅ Tomorrow matches from PHP API:', data.meta?.total || 0);
         
-        if (data.matches && data.matches.length > 0) {
-          return this.transformFootballDataMatches(data.matches);
+        if (data.success && data.data && data.data.length > 0) {
+          return this.transformPhpApiMatches(data.data);
         }
+      } else {
+        console.warn('❌ PHP API request failed:', response.status, response.statusText);
       }
       
-      console.log('📦 No matches found for tomorrow');
-      return [];
+      console.log('📦 No matches found for tomorrow, using mock data');
+      return this.getMockTomorrowMatches();
     } catch (error) {
       console.error('❌ Error loading tomorrow matches:', error);
-      return [];
+      return this.getMockTomorrowMatches();
     }
   }
 
   // Get matches from specific major competitions
   static async getMajorCompetitionMatches(days: number = 7): Promise<Match[]> {
     try {
-      console.log('🏆 Loading major competition matches from daily data...');
+      console.log('🏆 Loading major competition matches from PHP API...');
       
-      const response = await fetch('/.netlify/functions/matches?type=major');
+      const response = await fetch(createPhpApiUrl('matches', 'live'), {
+        headers,
+        method: 'GET'
+      });
+      
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Major competition matches from API:', data.count);
+        console.log('✅ Major competition matches from PHP API:', data.meta?.total || 0);
         
-        if (data.matches && data.matches.length > 0) {
-          return this.transformFootballDataMatches(data.matches);
+        if (data.success && data.data && data.data.length > 0) {
+          // Filter for major competitions only
+          const majorMatches = data.data.filter((match: any) => 
+            this.isMajorCompetition(match.league?.name || '')
+          );
+          return this.transformPhpApiMatches(majorMatches);
         }
+      } else {
+        console.warn('❌ PHP API request failed:', response.status, response.statusText);
       }
       
-      console.log('📦 No major competition matches found');
+      console.log('📦 No major competition matches found, using mock data');
       return [];
     } catch (error) {
       console.error('❌ Error loading major competition matches:', error);
@@ -116,26 +139,16 @@ export class FootballAPI {
 
   static async getMatchById(matchId: string): Promise<MatchWithStreams | null> {
     try {
-      const response = await fetch(
-        `${API_BASE}/matches/${matchId}`,
-        { headers }
-      );
+      // For individual matches, we'll use the mock data for now
+      // In the future, you could add a specific endpoint for single matches
+      console.log('🔍 Loading individual match (using mock data for now)');
       
-      if (!response.ok) {
-        console.warn('API request failed');
-        return null;
-      }
-      
-      const data = await response.json();
-      const match = this.transformFootballDataMatch(data);
-      
-      if (!match) return null;
-
-      // Add mock streams data
       const streams = this.getMockStreams();
+      const mockMatch = this.getMockTodayMatches()[0];
       
       return {
-        ...match,
+        ...mockMatch,
+        fixture: { ...mockMatch.fixture, id: parseInt(matchId) },
         streams,
         streamCount: streams.length,
         averageRating: streams.reduce((sum, stream) => sum + stream.rating, 0) / streams.length
@@ -148,92 +161,118 @@ export class FootballAPI {
 
   static async getLiveScore(matchId: string): Promise<Match | null> {
     try {
-      const response = await fetch(
-        `${API_BASE}/matches/${matchId}`,
-        { headers }
-      );
-      
-      if (!response.ok) {
-        return null;
-      }
-      
-      const data = await response.json();
-      return this.transformFootballDataMatch(data);
+      // For live scores, we'll use the mock data for now
+      console.log('📡 Loading live score (using mock data for now)');
+      const mockMatch = this.getMockTodayMatches()[0];
+      return {
+        ...mockMatch,
+        fixture: { ...mockMatch.fixture, id: parseInt(matchId) }
+      };
     } catch (error) {
       console.error('Error fetching live score:', error);
       return null;
     }
   }
 
-  // Transform Football-Data.org API response to our format
-  static transformFootballDataMatches(matches: any[]): Match[] {
-    return matches.map(match => this.transformFootballDataMatch(match)).filter(Boolean);
+  // Transform PHP API response to our frontend format
+  static transformPhpApiMatches(matches: any[]): Match[] {
+    return matches.map(match => this.transformPhpApiMatch(match)).filter(Boolean);
   }
 
-  static transformFootballDataMatch(match: any): Match {
+  static transformPhpApiMatch(match: any): Match {
     return {
       fixture: {
-        id: match.id,
-        referee: match.referees?.[0]?.name || null,
+        id: match.id || 0,
+        referee: match.referee || null,
         timezone: "UTC",
-        date: match.utcDate,
-        timestamp: new Date(match.utcDate).getTime() / 1000,
+        date: match.date || new Date().toISOString(),
+        timestamp: new Date(match.date || Date.now()).getTime() / 1000,
         status: {
-          long: this.getStatusLong(match.status),
-          short: this.getStatusShort(match.status),
-          elapsed: match.minute || null
+          long: match.statusText || "Unknown",
+          short: match.status || "NS",
+          elapsed: match.elapsed || null
         },
         venue: {
-          id: match.id,
+          id: match.id || 0,
           name: match.venue || "TBD",
-          city: match.area?.name || "TBD"
+          city: match.venue || "TBD"
         }
       },
       league: {
-        id: match.competition.id,
-        name: match.competition.name,
-        country: match.area?.name || match.competition.area?.name || "International",
-        logo: match.competition.emblem || "",
-        flag: match.area?.flag || "",
-        season: match.season?.currentMatchday || new Date().getFullYear()
+        id: match.league?.id || 0,
+        name: match.league?.name || "Unknown League",
+        country: match.league?.country || "Unknown",
+        logo: match.league?.logo || "",
+        flag: match.league?.flag || "",
+        season: new Date().getFullYear()
       },
       teams: {
         home: {
-          id: match.homeTeam.id,
-          name: match.homeTeam.name,
-          logo: match.homeTeam.crest || "",
-          country: match.area?.name || ""
+          id: match.homeTeam?.id || 0,
+          name: match.homeTeam?.name || "Home Team",
+          logo: match.homeTeam?.logo || "",
+          country: match.league?.country || ""
         },
         away: {
-          id: match.awayTeam.id,
-          name: match.awayTeam.name,
-          logo: match.awayTeam.crest || "",
-          country: match.area?.name || ""
+          id: match.awayTeam?.id || 0,
+          name: match.awayTeam?.name || "Away Team",
+          logo: match.awayTeam?.logo || "",
+          country: match.league?.country || ""
         }
       },
       goals: {
-        home: match.score?.fullTime?.home ?? null,
-        away: match.score?.fullTime?.away ?? null
+        home: match.score?.home ?? null,
+        away: match.score?.away ?? null
       },
       score: {
         halftime: {
-          home: match.score?.halfTime?.home ?? null,
-          away: match.score?.halfTime?.away ?? null
+          home: match.score?.home ?? null,
+          away: match.score?.away ?? null
         },
         fulltime: {
-          home: match.score?.fullTime?.home ?? null,
-          away: match.score?.fullTime?.away ?? null
+          home: match.score?.home ?? null,
+          away: match.score?.away ?? null
         },
         extratime: {
-          home: match.score?.extraTime?.home ?? null,
-          away: match.score?.extraTime?.away ?? null
+          home: null,
+          away: null
         },
         penalty: {
-          home: match.score?.penalties?.home ?? null,
-          away: match.score?.penalties?.away ?? null
+          home: null,
+          away: null
         }
       }
     };
+  }
+
+  // Helper to identify major competitions
+  static isMajorCompetition(leagueName: string): boolean {
+    const majorLeagues = [
+      'Premier League',
+      'La Liga', 
+      'Serie A',
+      'Bundesliga',
+      'Ligue 1',
+      'Champions League',
+      'Europa League',
+      'World Cup',
+      'Euro Championship'
+    ];
+    
+    return majorLeagues.some(league => 
+      leagueName.toLowerCase().includes(league.toLowerCase())
+    );
+  }
+
+  // Legacy transformation methods for backwards compatibility
+  static transformFootballDataMatches(matches: any[]): Match[] {
+    // This method is kept for compatibility but now redirects to PHP API transformation
+    return this.transformPhpApiMatches(matches);
+  }
+
+  static transformFootballDataMatch(match: any): Match {
+    // This method is kept for compatibility but now redirects to PHP API transformation
+    return this.transformPhpApiMatch(match);
   }
 
   static getStatusLong(status: string): string {

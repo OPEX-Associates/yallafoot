@@ -4,14 +4,12 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  NEXT_PUBLIC_PHP_API_BASE = "https://football.opex.associates/api"
+  NEXT_PUBLIC_PHP_API_KEY = "yf_prod_b5f603e5da167f0e69f3902b644f66171c3197f34426fe9b3217c11375f354ca"
+  NEXT_PUBLIC_ENVIRONMENT = "production"
 
-# Netlify Functions
-[functions]
-  directory = "netlify/functions"
-
-# Scheduled Functions (no plugin needed)
-[functions."daily-update"]
-  schedule = "0 6 * * *"  # Run at 6 AM UTC every day
+# Note: Netlify Functions are now replaced by PHP API
+# The functions directory is kept for reference but won't be used
 
 [[headers]]
   for = "/*"
