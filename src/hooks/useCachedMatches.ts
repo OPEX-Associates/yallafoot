@@ -60,11 +60,20 @@ export function useCachedMatches(options: UseCachedMatchesOptions = {}) {
     try {
       setError(null);
       
-      const response = await fetch(`/api/cached-matches?type=${type}`, {
-        // Client-side caching - let browser cache for a bit
-        cache: 'default',
+      // Use the PHP API instead of Netlify functions
+      const PHP_API_BASE = process.env.NEXT_PUBLIC_PHP_API_BASE || 'https://football.opex.associates/api';
+      const PHP_API_KEY = process.env.NEXT_PUBLIC_PHP_API_KEY || 'yf_prod_b5f603e5da167f0e69f3902b644f66171c3197f34426fe9b3217c11375f354ca';
+      
+      const params = new URLSearchParams();
+      params.append('endpoint', 'matches');
+      params.append('type', type);
+      
+      const response = await fetch(`${PHP_API_BASE}/index.php?${params.toString()}`, {
+        cache: 'no-store', // Always get fresh data
         headers: {
-          'Cache-Control': 'max-age=60' // Cache for 1 minute on client
+          'X-API-Key': PHP_API_KEY,
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
         }
       });
 
@@ -72,17 +81,66 @@ export function useCachedMatches(options: UseCachedMatchesOptions = {}) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const result = await response.json();
+      // Clean response to handle PHP errors/warnings
+      const responseText = await response.text();
+      const cleanJsonText = responseText
+        .replace(/<br\s*\/?>/gi, '')
+        .replace(/<b>.*?<\/b>/gi, '')
+        .replace(/Warning:.*?on line.*?\n/gi, '')
+        .replace(/Notice:.*?on line.*?\n/gi, '')
+        .trim();
       
-      if (isActiveRef.current) {
-        setData(result);
+      const jsonStart = cleanJsonText.indexOf('{');
+      const actualJson = jsonStart >= 0 ? cleanJsonText.substring(jsonStart) : cleanJsonText;
+      
+      const result = JSON.parse(actualJson);
+      
+      if (isActiveRef.current && result.success) {
+        // Transform PHP API response to match expected format
+        const transformedData = {
+          matches: result.data.map((match: any) => ({
+            id: match.id.toString(),
+            homeTeam: {
+              name: match.homeTeam?.name || 'Home Team',
+              logo: match.homeTeam?.logo || ''
+            },
+            awayTeam: {
+              name: match.awayTeam?.name || 'Away Team', 
+              logo: match.awayTeam?.logo || ''
+            },
+            score: {
+              home: match.score?.home ?? null,
+              away: match.score?.away ?? null
+            },
+            status: match.status || 'NS',
+            statusText: match.statusText || 'Not Started',
+            date: match.date || new Date().toISOString(),
+            venue: match.venue || 'TBD',
+            league: {
+              name: match.league?.name || 'Unknown League',
+              country: match.league?.country || 'Unknown',
+              logo: match.league?.logo || ''
+            },
+            elapsed: match.elapsed || null,
+            isLive: match.isLive || false
+          })),
+          meta: {
+            total: result.meta?.total || 0,
+            live: result.meta?.live || 0,
+            lastUpdate: new Date().toISOString(),
+            notice: 'Data from YallaFoot PHP API',
+            ageMinutes: Math.floor((result.meta?.cache_info?.age_minutes || 0)),
+            requestsToday: result.meta?.api_usage?.requests_today || 0,
+            freeApiMode: true
+          }
+        };
+        
+        setData(transformedData);
         setLastFetch(new Date());
         setLoading(false);
         
-        // Log cache info for transparency
-        if (result.meta.freeApiMode) {
-          console.log(`📦 Served from cache (${result.meta.ageMinutes}min old, ${result.meta.requestsToday} API calls today)`);
-        }
+        // Log for debugging
+        console.log(`📦 PHP API: ${transformedData.meta.total} matches, ${transformedData.meta.live} live`);
       }
     } catch (err) {
       if (isActiveRef.current) {
@@ -151,14 +209,12 @@ export function useCachedMatches(options: UseCachedMatchesOptions = {}) {
   const forceUpdate = useCallback(async () => {
     setLoading(true);
     try {
-      // Force server-side cache update
-      await fetch(`/api/cached-matches?type=${type}&force=true`);
-      // Then fetch the updated data
+      // Force refresh by calling the API directly
       fetchCachedMatches();
     } catch (err) {
       setError('Failed to force update');
     }
-  }, [type, fetchCachedMatches]);
+  }, [fetchCachedMatches]);
 
   return {
     // Data
