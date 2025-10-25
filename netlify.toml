@@ -6,9 +6,9 @@
   NODE_VERSION = "20"
   # Environment variables are set in Netlify dashboard to avoid secret scanner warnings
   # These NEXT_PUBLIC_ variables are intentionally public and safe to expose:
-  # - NEXT_PUBLIC_PHP_API_BASE: API endpoint URL
-  # - NEXT_PUBLIC_PHP_API_KEY: Client-side key for PHP API (backend handles real security)
-  # - NEXT_PUBLIC_ENVIRONMENT: Just "production"
+    NEXT_PUBLIC_PHP_API_BASE: API endpoint URL
+    NEXT_PUBLIC_PHP_API_KEY: Client-side key for PHP API (backend handles real security)
+    NEXT_PUBLIC_ENVIRONMENT: Just "production"
 
 # Note: Using static export, no Netlify Next.js plugin needed
 # The functions directory is kept for reference but won't be used
