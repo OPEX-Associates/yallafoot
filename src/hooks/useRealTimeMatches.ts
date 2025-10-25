@@ -75,7 +75,22 @@ export function useRealTimeMatches(options: UseRealTimeMatchesOptions = {}) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const result = await response.json();
+      // Get response text first to clean it
+      const responseText = await response.text();
+      
+      // Remove any PHP error/warning HTML output that might corrupt JSON
+      const cleanJsonText = responseText
+        .replace(/<br\s*\/?>/gi, '') // Remove <br> tags
+        .replace(/<b>.*?<\/b>/gi, '') // Remove <b> tags and content
+        .replace(/Warning:.*?on line.*?\n/gi, '') // Remove PHP warnings
+        .replace(/Notice:.*?on line.*?\n/gi, '') // Remove PHP notices
+        .trim();
+      
+      // Find the start of actual JSON (look for opening brace)
+      const jsonStart = cleanJsonText.indexOf('{');
+      const actualJson = jsonStart >= 0 ? cleanJsonText.substring(jsonStart) : cleanJsonText;
+      
+      const result = JSON.parse(actualJson);
       
       if (isActiveRef.current && result.success) {
         // Transform PHP API response to match expected format

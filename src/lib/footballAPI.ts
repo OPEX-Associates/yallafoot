@@ -30,7 +30,19 @@ export class FootballAPI {
       });
       
       if (response.ok) {
-        const data = await response.json();
+        // Clean response to handle PHP errors/warnings
+        const responseText = await response.text();
+        const cleanJsonText = responseText
+          .replace(/<br\s*\/?>/gi, '')
+          .replace(/<b>.*?<\/b>/gi, '')
+          .replace(/Warning:.*?on line.*?\n/gi, '')
+          .replace(/Notice:.*?on line.*?\n/gi, '')
+          .trim();
+        
+        const jsonStart = cleanJsonText.indexOf('{');
+        const actualJson = jsonStart >= 0 ? cleanJsonText.substring(jsonStart) : cleanJsonText;
+        
+        const data = JSON.parse(actualJson);
         console.log('✅ Yesterday matches from PHP API:', data.meta?.total || 0);
         
         if (data.success && data.data && data.data.length > 0) {
@@ -58,7 +70,19 @@ export class FootballAPI {
       });
       
       if (response.ok) {
-        const data = await response.json();
+        // Clean response to handle PHP errors/warnings
+        const responseText = await response.text();
+        const cleanJsonText = responseText
+          .replace(/<br\s*\/?>/gi, '')
+          .replace(/<b>.*?<\/b>/gi, '')
+          .replace(/Warning:.*?on line.*?\n/gi, '')
+          .replace(/Notice:.*?on line.*?\n/gi, '')
+          .trim();
+        
+        const jsonStart = cleanJsonText.indexOf('{');
+        const actualJson = jsonStart >= 0 ? cleanJsonText.substring(jsonStart) : cleanJsonText;
+        
+        const data = JSON.parse(actualJson);
         console.log('✅ Today matches from PHP API:', data.meta?.total || 0);
         
         if (data.success && data.data && data.data.length > 0) {
@@ -86,7 +110,19 @@ export class FootballAPI {
       });
       
       if (response.ok) {
-        const data = await response.json();
+        // Clean response to handle PHP errors/warnings
+        const responseText = await response.text();
+        const cleanJsonText = responseText
+          .replace(/<br\s*\/?>/gi, '')
+          .replace(/<b>.*?<\/b>/gi, '')
+          .replace(/Warning:.*?on line.*?\n/gi, '')
+          .replace(/Notice:.*?on line.*?\n/gi, '')
+          .trim();
+        
+        const jsonStart = cleanJsonText.indexOf('{');
+        const actualJson = jsonStart >= 0 ? cleanJsonText.substring(jsonStart) : cleanJsonText;
+        
+        const data = JSON.parse(actualJson);
         console.log('✅ Tomorrow matches from PHP API:', data.meta?.total || 0);
         
         if (data.success && data.data && data.data.length > 0) {
@@ -115,7 +151,19 @@ export class FootballAPI {
       });
       
       if (response.ok) {
-        const data = await response.json();
+        // Clean response to handle PHP errors/warnings
+        const responseText = await response.text();
+        const cleanJsonText = responseText
+          .replace(/<br\s*\/?>/gi, '')
+          .replace(/<b>.*?<\/b>/gi, '')
+          .replace(/Warning:.*?on line.*?\n/gi, '')
+          .replace(/Notice:.*?on line.*?\n/gi, '')
+          .trim();
+        
+        const jsonStart = cleanJsonText.indexOf('{');
+        const actualJson = jsonStart >= 0 ? cleanJsonText.substring(jsonStart) : cleanJsonText;
+        
+        const data = JSON.parse(actualJson);
         console.log('✅ Major competition matches from PHP API:', data.meta?.total || 0);
         
         if (data.success && data.data && data.data.length > 0) {
