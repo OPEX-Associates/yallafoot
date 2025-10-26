@@ -2,6 +2,10 @@
 /**
  * Match Data Manager
  */
+
+// Include popular leagues configuration
+require_once __DIR__ . '/../config/popular-leagues.php';
+
 class MatchManager {
     private $db;
     
@@ -9,15 +13,28 @@ class MatchManager {
         $this->db = Database::getInstance();
     }
     
-    public function getLiveMatches() {
+    public function getLiveMatches($popularOnly = false) {
+        if ($popularOnly) {
+            return $this->getPopularLiveMatches();
+        }
         return $this->db->fetchAll("SELECT * FROM live_matches_view ORDER BY match_date ASC");
     }
     
-    public function getTodayMatches() {
+    public function getTodayMatches($popularOnly = false) {
+        if ($popularOnly) {
+            return $this->getPopularTodayMatches();
+        }
         return $this->db->fetchAll("SELECT * FROM today_matches_view ORDER BY match_date ASC");
     }
     
-    public function getTomorrowMatches() {
+    /**
+     * Get live matches from popular leagues only
+     */
+    public function getPopularLiveMatches($tier = null) {
+        $whereClause = $tier === 1 
+            ? PopularLeagues::getTier1LeaguesWhereClause('m')
+            : PopularLeagues::getPopularLeaguesWhereClause('m');
+            
         $sql = "
             SELECT 
                 m.id,
@@ -28,6 +45,7 @@ class MatchManager {
                 m.home_score,
                 m.away_score,
                 m.venue_name,
+                m.is_live,
                 ht.name as home_team_name,
                 ht.logo as home_team_logo,
                 at.name as away_team_name,
@@ -39,7 +57,83 @@ class MatchManager {
             LEFT JOIN teams ht ON m.home_team_id = ht.id
             LEFT JOIN teams at ON m.away_team_id = at.id
             LEFT JOIN leagues l ON m.league_id = l.id
-            WHERE DATE(m.match_date) = DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+            WHERE m.is_live = TRUE AND {$whereClause}
+            ORDER BY m.match_date ASC
+        ";
+        
+        return $this->db->fetchAll($sql);
+    }
+    
+    /**
+     * Get today's matches from popular leagues only
+     */
+    public function getPopularTodayMatches($tier = null) {
+        $whereClause = $tier === 1 
+            ? PopularLeagues::getTier1LeaguesWhereClause('m')
+            : PopularLeagues::getPopularLeaguesWhereClause('m');
+            
+        $sql = "
+            SELECT 
+                m.id,
+                m.match_date,
+                m.status_short,
+                m.status_long,
+                m.elapsed,
+                m.home_score,
+                m.away_score,
+                m.venue_name,
+                m.is_live,
+                ht.name as home_team_name,
+                ht.logo as home_team_logo,
+                at.name as away_team_name,
+                at.logo as away_team_logo,
+                l.name as league_name,
+                l.country as league_country,
+                l.logo as league_logo
+            FROM matches m
+            LEFT JOIN teams ht ON m.home_team_id = ht.id
+            LEFT JOIN teams at ON m.away_team_id = at.id
+            LEFT JOIN leagues l ON m.league_id = l.id
+            WHERE DATE(m.match_date) = CURDATE() AND {$whereClause}
+            ORDER BY m.match_date ASC
+        ";
+        
+        return $this->db->fetchAll($sql);
+    }
+    
+    public function getTomorrowMatches($popularOnly = false, $tier = null) {
+        $whereClause = "DATE(m.match_date) = DATE_ADD(CURDATE(), INTERVAL 1 DAY)";
+        
+        if ($popularOnly) {
+            $leagueFilter = $tier === 1 
+                ? PopularLeagues::getTier1LeaguesWhereClause('m')
+                : PopularLeagues::getPopularLeaguesWhereClause('m');
+            $whereClause .= " AND {$leagueFilter}";
+        }
+        
+        $sql = "
+            SELECT 
+                m.id,
+                m.match_date,
+                m.status_short,
+                m.status_long,
+                m.elapsed,
+                m.home_score,
+                m.away_score,
+                m.venue_name,
+                m.is_live,
+                ht.name as home_team_name,
+                ht.logo as home_team_logo,
+                at.name as away_team_name,
+                at.logo as away_team_logo,
+                l.name as league_name,
+                l.country as league_country,
+                l.logo as league_logo
+            FROM matches m
+            LEFT JOIN teams ht ON m.home_team_id = ht.id
+            LEFT JOIN teams at ON m.away_team_id = at.id
+            LEFT JOIN leagues l ON m.league_id = l.id
+            WHERE {$whereClause}
             ORDER BY m.match_date ASC
         ";
         
@@ -142,6 +236,16 @@ class MatchManager {
     }
     
     public function transformMatchForAPI($match) {
+        // Determine if match is live based on status if is_live field is not available
+        $isLive = false;
+        if (isset($match['is_live'])) {
+            $isLive = (bool)$match['is_live'];
+        } else {
+            // Fallback: determine live status from status_short
+            $liveStatuses = ['1H', '2H', 'HT', 'ET', 'P', 'LIVE'];
+            $isLive = in_array($match['status_short'], $liveStatuses);
+        }
+        
         return [
             'id' => (int)$match['id'],
             'homeTeam' => [
@@ -166,7 +270,7 @@ class MatchManager {
                 'logo' => $match['league_logo']
             ],
             'elapsed' => $match['elapsed'] ? (int)$match['elapsed'] : null,
-            'isLive' => (bool)$match['is_live']
+            'isLive' => $isLive
         ];
     }
     

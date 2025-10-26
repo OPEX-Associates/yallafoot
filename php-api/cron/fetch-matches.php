@@ -21,6 +21,7 @@ if (isset($_SERVER['HTTP_HOST'])) {
 // Include configuration and classes
 require_once __DIR__ . '/../config/api-config.php';
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/popular-leagues.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/MatchManager.php';
 
@@ -90,10 +91,10 @@ class MatchFetcher {
                 return;
             }
             
-            // Determine API endpoint
-            $endpoint = $this->getAPIEndpoint($type);
+            // Get API endpoint (with popular leagues filtering)
+            $endpoint = $this->getAPIEndpoint($type, true); // true = popular leagues only
             if (!$endpoint) {
-                $this->log("ERROR: Invalid type: $type");
+                $this->log("ERROR: Unknown type '$type'");
                 $this->log("=== FETCH MATCHES END (INVALID TYPE) ===");
                 return;
             }
@@ -207,20 +208,44 @@ class MatchFetcher {
         }
     }
     
-    private function getAPIEndpoint($type) {
+    private function getAPIEndpoint($type, $popularOnly = true) {
+        $baseEndpoint = '';
+        
         switch ($type) {
             case 'live':
-                return '/fixtures?live=all';
+                $baseEndpoint = '/fixtures?live=all';
+                break;
             case 'today':
-                return '/fixtures?date=' . date('Y-m-d');
+                $baseEndpoint = '/fixtures?date=' . date('Y-m-d');
+                break;
             case 'tomorrow':
                 $tomorrow = date('Y-m-d', strtotime('+1 day'));
-                return '/fixtures?date=' . $tomorrow;
+                $baseEndpoint = '/fixtures?date=' . $tomorrow;
+                break;
             case 'leagues':
                 return '/leagues';
             default:
                 return null;
         }
+        
+        // Add league filtering for popular leagues only
+        if ($popularOnly && in_array($type, ['live', 'today', 'tomorrow'])) {
+            $popularLeagueIds = PopularLeagues::getAllPopularLeagueIds();
+            
+            // API-Sports allows multiple league IDs separated by hyphens
+            // We'll fetch tier 1 leagues first (most important)
+            $tier1Leagues = PopularLeagues::getTier1LeagueIds();
+            
+            // Limit to first 10 leagues to avoid URL length issues
+            $leagueIds = array_slice($tier1Leagues, 0, 10);
+            $leagueParam = implode('-', $leagueIds);
+            
+            $baseEndpoint .= '&league=' . $leagueParam;
+            
+            $this->log("Filtering for popular leagues (Tier 1): " . $leagueParam);
+        }
+        
+        return $baseEndpoint;
     }
     
     private function fetchFromAPI($endpoint) {

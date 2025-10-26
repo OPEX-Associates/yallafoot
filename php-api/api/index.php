@@ -133,22 +133,39 @@ function handleMatchesRequest($action) {
         $matchManager = new MatchManager();
         $type = $_GET['type'] ?? $action ?? 'today';
         
+        // Check for popular leagues filter
+        $popularOnly = isset($_GET['popular']) && $_GET['popular'] === 'true';
+        $tier = isset($_GET['tier']) ? (int)$_GET['tier'] : null;
+        
         // Validate type
         $allowedTypes = ['live', 'today', 'tomorrow'];
         if (!in_array($type, $allowedTypes)) {
             APIAuth::sendErrorResponse("Invalid type. Allowed: " . implode(', ', $allowedTypes), 400);
         }
         
-        // Get matches based on type
+        // Validate tier if provided
+        if ($tier !== null && !in_array($tier, [1, 2])) {
+            APIAuth::sendErrorResponse("Invalid tier. Allowed: 1 (top leagues only), 2 (all popular leagues)", 400);
+        }
+        
+        // Get matches based on type and filters
         switch ($type) {
             case 'live':
-                $matches = $matchManager->getLiveMatches();
+                if ($popularOnly) {
+                    $matches = $matchManager->getPopularLiveMatches($tier);
+                } else {
+                    $matches = $matchManager->getLiveMatches();
+                }
                 break;
             case 'today':
-                $matches = $matchManager->getTodayMatches();
+                if ($popularOnly) {
+                    $matches = $matchManager->getPopularTodayMatches($tier);
+                } else {
+                    $matches = $matchManager->getTodayMatches();
+                }
                 break;
             case 'tomorrow':
-                $matches = $matchManager->getTomorrowMatches();
+                $matches = $matchManager->getTomorrowMatches($popularOnly, $tier);
                 break;
         }
         
@@ -165,6 +182,8 @@ function handleMatchesRequest($action) {
             'total' => count($transformedMatches),
             'live' => count(array_filter($transformedMatches, function($m) { return $m['isLive']; })),
             'type' => $type,
+            'popular_only' => $popularOnly,
+            'tier' => $tier,
             'cache_info' => $cacheInfo,
             'api_usage' => $rateLimitInfo,
             'response_time_ms' => $responseTime

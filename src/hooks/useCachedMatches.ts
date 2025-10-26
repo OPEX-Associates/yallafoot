@@ -37,13 +37,17 @@ interface UseCachedMatchesOptions {
   type?: 'live' | 'today' | 'tomorrow';
   autoRefresh?: boolean;
   refreshInterval?: number; // in seconds, will be overridden by smart logic
+  popularOnly?: boolean; // Filter for popular leagues only
+  tier?: 1 | 2; // League tier (1 = top leagues, 2 = all popular leagues)
 }
 
 export function useCachedMatches(options: UseCachedMatchesOptions = {}) {
   const {
     type = 'today',
     autoRefresh = true,
-    refreshInterval = 60 // Default 1 minute for cached data
+    refreshInterval = 60, // Default 1 minute for cached data
+    popularOnly = false,
+    tier
   } = options;
 
   const [data, setData] = useState<CachedMatchesData | null>(null);
@@ -67,6 +71,14 @@ export function useCachedMatches(options: UseCachedMatchesOptions = {}) {
       const params = new URLSearchParams();
       params.append('endpoint', 'matches');
       params.append('type', type);
+      
+      // Add popular leagues filter if requested
+      if (popularOnly) {
+        params.append('popular', 'true');
+        if (tier) {
+          params.append('tier', tier.toString());
+        }
+      }
       
       const response = await fetch(`${PHP_API_BASE}/index.php?${params.toString()}`, {
         method: 'GET',
