@@ -114,7 +114,8 @@ class MatchFetcher {
             
             // Process and save matches
             $this->log("Starting to process matches...");
-            $savedCount = $this->processMatches($data['response'] ?? []);
+            $filterPopular = true; // Always filter popular leagues for all match types
+            $savedCount = $this->processMatches($data['response'] ?? [], $filterPopular);
             $this->log("Processed and saved $savedCount matches");
             
             // Update cache metadata
@@ -210,17 +211,23 @@ class MatchFetcher {
     
     private function getAPIEndpoint($type, $popularOnly = true) {
         $baseEndpoint = '';
+        // Free plan only supports seasons 2021-2023, and no current/future dates
         
         switch ($type) {
             case 'live':
+                // For live matches, API-Sports doesn't support league filtering with live=all
+                // We'll fetch all live matches and filter them after fetching
                 $baseEndpoint = '/fixtures?live=all';
                 break;
             case 'today':
-                $baseEndpoint = '/fixtures?date=' . date('Y-m-d');
+                // Free plan doesn't support current dates, we'll fetch all live instead
+                $baseEndpoint = '/fixtures?live=all';
+                $this->log("Free plan limitation: using live endpoint instead of today's date");
                 break;
             case 'tomorrow':
-                $tomorrow = date('Y-m-d', strtotime('+1 day'));
-                $baseEndpoint = '/fixtures?date=' . $tomorrow;
+                // Free plan doesn't support future dates, we'll fetch all live instead
+                $baseEndpoint = '/fixtures?live=all';
+                $this->log("Free plan limitation: using live endpoint instead of tomorrow's date");
                 break;
             case 'leagues':
                 return '/leagues';
@@ -228,22 +235,9 @@ class MatchFetcher {
                 return null;
         }
         
-        // Add league filtering for popular leagues only
-        if ($popularOnly && in_array($type, ['live', 'today', 'tomorrow'])) {
-            $popularLeagueIds = PopularLeagues::getAllPopularLeagueIds();
-            
-            // API-Sports allows multiple league IDs separated by hyphens
-            // We'll fetch tier 1 leagues first (most important)
-            $tier1Leagues = PopularLeagues::getTier1LeagueIds();
-            
-            // Limit to first 10 leagues to avoid URL length issues
-            $leagueIds = array_slice($tier1Leagues, 0, 10);
-            $leagueParam = implode('-', $leagueIds);
-            
-            $baseEndpoint .= '&league=' . $leagueParam;
-            
-            $this->log("Filtering for popular leagues (Tier 1): " . $leagueParam);
-        }
+        // For free plan, we can't filter by specific leagues with dates
+        // We'll fetch all live matches and filter them after
+        $this->log("Using live endpoint, will filter popular leagues after API call");
         
         return $baseEndpoint;
     }
@@ -327,8 +321,21 @@ class MatchFetcher {
         return $data;
     }
     
-    private function processMatches($matches) {
+    private function processMatches($matches, $filterPopular = false) {
         $this->log("Processing " . count($matches) . " matches");
+        
+        // Filter for popular leagues if requested
+        if ($filterPopular) {
+            $tier1Leagues = PopularLeagues::getTier1LeagueIds();
+            $tier2Leagues = PopularLeagues::getTier2LeagueIds();
+            $popularLeagueIds = array_merge($tier1Leagues, $tier2Leagues);
+            $matches = array_filter($matches, function($match) use ($popularLeagueIds) {
+                $leagueId = $match['league']['id'] ?? null;
+                return in_array($leagueId, $popularLeagueIds);
+            });
+            $this->log("Filtered to " . count($matches) . " matches from popular leagues (Tier 1 + Tier 2)");
+        }
+        
         $savedCount = 0;
         $errorCount = 0;
         
@@ -341,8 +348,9 @@ class MatchFetcher {
                 $homeTeam = $matchData['teams']['home']['name'] ?? 'Unknown';
                 $awayTeam = $matchData['teams']['away']['name'] ?? 'Unknown';
                 $matchDate = $matchData['fixture']['date'] ?? 'Unknown';
+                $leagueName = $matchData['league']['name'] ?? 'Unknown';
                 
-                $this->log("Match ID: $matchId, $homeTeam vs $awayTeam, Date: $matchDate");
+                $this->log("Match ID: $matchId, $homeTeam vs $awayTeam, League: $leagueName, Date: $matchDate");
                 
                 // Process match data manually since MatchManager might not exist
                 $result = $this->saveMatchDirectly($matchData);
