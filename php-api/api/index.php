@@ -16,6 +16,7 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/APIAuth.php';
 require_once __DIR__ . '/../classes/MatchManager.php';
+require_once __DIR__ . '/../classes/StreamManager.php';
 
 // Enable CORS
 APIAuth::enableCORS();
@@ -65,6 +66,10 @@ try {
             
         case 'matches':
             handleMatchesRequest($action);
+            break;
+
+        case 'links':
+            handleLinksRequest($action);
             break;
             
         case 'cache':
@@ -228,5 +233,154 @@ function handleCacheRequest($action) {
         APIAuth::logRequest("/cache/clear", $responseTime, 500, $e->getMessage());
         APIAuth::sendErrorResponse('Failed to clear cache', 500, $e->getMessage());
     }
+}
+
+function handleLinksRequest($action) {
+    global $startTime;
+
+    $streamManager = new StreamManager();
+    $requestMethod = $_SERVER['REQUEST_METHOD'];
+
+    if ($requestMethod === 'GET') {
+        if ($action === null || $action === 'approved' || $action === 'list') {
+            $matchIdParam = $_GET['match_id'] ?? $_GET['matchId'] ?? null;
+            $matchId = filter_var($matchIdParam, FILTER_VALIDATE_INT);
+
+            if (!$matchId) {
+                APIAuth::sendErrorResponse('match_id is required', 400);
+            }
+
+            $links = $streamManager->getApprovedLinksByMatchId($matchId);
+            $transformedLinks = array_map([$streamManager, 'transformLinkForAPI'], $links);
+
+            $responseTime = round((microtime(true) - $startTime) * 1000);
+            $meta = [
+                'total' => count($transformedLinks),
+                'match_id' => $matchId,
+                'status' => 'approved'
+            ];
+
+            APIAuth::logRequest("/links/approved", $responseTime, 200);
+            APIAuth::sendSuccessResponse($transformedLinks, $meta);
+        }
+
+        if ($action === 'pending') {
+            APIAuth::authenticateAdmin();
+
+            $links = $streamManager->getPendingLinks();
+            $transformedLinks = array_map([$streamManager, 'transformLinkForAPI'], $links);
+
+            $responseTime = round((microtime(true) - $startTime) * 1000);
+            $meta = [
+                'total' => count($transformedLinks),
+                'status' => 'pending'
+            ];
+
+            APIAuth::logRequest("/links/pending", $responseTime, 200);
+            APIAuth::sendSuccessResponse($transformedLinks, $meta);
+        }
+
+        APIAuth::sendErrorResponse('Invalid links action', 400);
+    }
+
+    if ($requestMethod !== 'POST') {
+        APIAuth::sendErrorResponse('Invalid request method', 405);
+    }
+
+    $data = getRequestData();
+
+    switch ($action) {
+        case 'submit':
+            $matchIdParam = $data['match_id'] ?? $data['matchId'] ?? null;
+            $matchId = filter_var($matchIdParam, FILTER_VALIDATE_INT);
+            $name = trim((string)($data['name'] ?? ''));
+            $url = trim((string)($data['url'] ?? ''));
+            $quality = trim((string)($data['quality'] ?? 'HD'));
+            $language = trim((string)($data['language'] ?? 'English'));
+            $submittedBy = trim((string)($data['submitted_by'] ?? $data['submittedBy'] ?? 'Anonymous'));
+
+            if (!$matchId) {
+                APIAuth::sendErrorResponse('match_id is required', 400);
+            }
+
+            if ($name === '' || $url === '') {
+                APIAuth::sendErrorResponse('name and url are required', 400);
+            }
+
+            if (!filter_var($url, FILTER_VALIDATE_URL)) {
+                APIAuth::sendErrorResponse('Invalid url format', 400);
+            }
+
+            $linkId = $streamManager->submitLink([
+                'match_id' => $matchId,
+                'name' => $name,
+                'url' => $url,
+                'quality' => $quality,
+                'language' => $language,
+                'submitted_by' => $submittedBy,
+                'submitted_ip' => $_SERVER['REMOTE_ADDR'] ?? null,
+                'submitted_user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? null
+            ]);
+
+            $responseTime = round((microtime(true) - $startTime) * 1000);
+            APIAuth::logRequest("/links/submit", $responseTime, 200);
+            APIAuth::sendSuccessResponse([
+                'id' => $linkId,
+                'status' => 'pending',
+                'message' => 'Link submitted for review'
+            ]);
+
+        case 'approve':
+            APIAuth::authenticateAdmin();
+
+            $linkId = filter_var($data['id'] ?? null, FILTER_VALIDATE_INT);
+            if (!$linkId) {
+                APIAuth::sendErrorResponse('id is required', 400);
+            }
+
+            $adminName = trim((string)($data['admin_name'] ?? $data['adminName'] ?? ''));
+            $streamManager->approveLink($linkId, $adminName !== '' ? $adminName : null);
+
+            $responseTime = round((microtime(true) - $startTime) * 1000);
+            APIAuth::logRequest("/links/approve", $responseTime, 200);
+            APIAuth::sendSuccessResponse([
+                'id' => $linkId,
+                'status' => 'approved'
+            ]);
+
+        case 'reject':
+            APIAuth::authenticateAdmin();
+
+            $linkId = filter_var($data['id'] ?? null, FILTER_VALIDATE_INT);
+            if (!$linkId) {
+                APIAuth::sendErrorResponse('id is required', 400);
+            }
+
+            $reason = trim((string)($data['reason'] ?? ''));
+            $adminName = trim((string)($data['admin_name'] ?? $data['adminName'] ?? ''));
+            $streamManager->rejectLink($linkId, $reason !== '' ? $reason : null, $adminName !== '' ? $adminName : null);
+
+            $responseTime = round((microtime(true) - $startTime) * 1000);
+            APIAuth::logRequest("/links/reject", $responseTime, 200);
+            APIAuth::sendSuccessResponse([
+                'id' => $linkId,
+                'status' => 'rejected'
+            ]);
+
+        default:
+            APIAuth::sendErrorResponse('Invalid links action', 400);
+    }
+}
+
+function getRequestData() {
+    $rawInput = file_get_contents('php://input');
+    if ($rawInput) {
+        $decoded = json_decode($rawInput, true);
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+            return $decoded;
+        }
+    }
+
+    return $_POST ?? [];
 }
 ?>

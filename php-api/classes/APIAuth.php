@@ -53,7 +53,7 @@ class APIAuth {
         }
         
         header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-        header("Access-Control-Allow-Headers: Content-Type, X-API-Key, x-api-key");
+        header("Access-Control-Allow-Headers: Content-Type, X-API-Key, x-api-key, X-Admin-Key, x-admin-key");
         header("Access-Control-Max-Age: 3600");
         
         // Handle preflight requests
@@ -61,6 +61,21 @@ class APIAuth {
             http_response_code(200);
             exit();
         }
+    }
+
+    public static function authenticateAdmin() {
+        $headers = self::getHeaders();
+        $adminKey = $headers['X-Admin-Key'] ?? $headers['x-admin-key'] ?? null;
+
+        if (!$adminKey) {
+            $adminKey = $_GET['admin_key'] ?? null;
+        }
+
+        if (!$adminKey || $adminKey !== ADMIN_SECRET_KEY) {
+            self::sendErrorResponse('Admin authorization required', 401);
+        }
+
+        return true;
     }
     
     public static function sendUnauthorizedResponse() {

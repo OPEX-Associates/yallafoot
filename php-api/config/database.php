@@ -7,8 +7,8 @@
 
 // Database Configuration
 define('DB_HOST', 'localhost');           // Usually 'localhost' on cPanel
-define('DB_NAME', 'emailman_yallafoot'); // Your cPanel database name
-define('DB_USER', 'emailman_yallafoot'); // Your cPanel database user
+define('DB_NAME', 'nexusaca_yallafoot'); // Your cPanel database name
+define('DB_USER', 'nexusaca_yallafoot'); // Your cPanel database user
 define('DB_PASS', 'yT46mVAXU1H3(Jr+'); // Your cPanel database password
 define('DB_CHARSET', 'utf8mb4');
 

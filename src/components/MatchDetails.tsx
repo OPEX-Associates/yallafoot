@@ -2,6 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { fetchFromPhpApi } from '@/lib/apiUtils';
+
+const PHP_API_BASE = process.env.NEXT_PUBLIC_PHP_API_BASE || 'https://football.opex.associates/api';
+const PHP_API_KEY = process.env.NEXT_PUBLIC_PHP_API_KEY || '';
 
 interface MatchDetailsProps {
   matchId: string;
@@ -51,6 +55,18 @@ export default function MatchDetails({ matchId }: MatchDetailsProps) {
   const [match, setMatch] = useState<MatchData | null>(null);
   const [stats, setStats] = useState<MatchStats>({});
   const [error, setError] = useState<string | null>(null);
+  const [streams, setStreams] = useState<StreamingLink[]>([]);
+  const [streamsLoading, setStreamsLoading] = useState(false);
+  const [streamsError, setStreamsError] = useState<string | null>(null);
+  const [submitState, setSubmitState] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [streamForm, setStreamForm] = useState({
+    name: '',
+    url: '',
+    quality: 'HD',
+    language: 'English',
+    submittedBy: ''
+  });
 
   // Helper function to display match status
   const getStatusDisplay = (status: string, elapsed?: number) => {
@@ -76,16 +92,7 @@ export default function MatchDetails({ matchId }: MatchDetailsProps) {
     }
   };
 
-  // Mock streaming links and betting data (these would come from your own databases)
-  const mockStreams: StreamingLink[] = [
-    { id: "1", name: "ESPN+ HD", quality: "FHD", language: "English", rating: 4.9, verified: true, url: "https://espnplus.com" },
-    { id: "2", name: "Sky Sports Main Event", quality: "4K", language: "English", rating: 4.8, verified: true, url: "https://skysports.com" },
-    { id: "3", name: "DAZN Sports", quality: "HD", language: "English", rating: 4.7, verified: true, url: "https://dazn.com" },
-    { id: "4", name: "beIN Sports", quality: "FHD", language: "Arabic", rating: 4.6, verified: true, url: "https://beinsports.com" },
-    { id: "5", name: "Sport Stream Pro", quality: "HD", language: "English", rating: 4.3, verified: false, url: "#" },
-    { id: "6", name: "Live Soccer TV", quality: "SD", language: "Multiple", rating: 4.1, verified: false, url: "#" }
-  ];
-
+  // Mock betting data (these would come from your own databases)
   const mockBetting: BettingOdds[] = [
     { provider: "Bet365", homeWin: 1.85, draw: 3.40, awayWin: 4.20 },
     { provider: "William Hill", homeWin: 1.90, draw: 3.30, awayWin: 4.00 },
@@ -93,6 +100,100 @@ export default function MatchDetails({ matchId }: MatchDetailsProps) {
     { provider: "888sport", homeWin: 1.82, draw: 3.45, awayWin: 4.25 },
     { provider: "Unibet", homeWin: 1.86, draw: 3.38, awayWin: 4.15 }
   ];
+
+  const handleStreamInputChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = event.target;
+    setStreamForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const fetchStreams = async () => {
+    if (!matchId) {
+      return;
+    }
+
+    setStreamsLoading(true);
+    setStreamsError(null);
+
+    try {
+      const params = new URLSearchParams({
+        endpoint: 'links',
+        action: 'approved',
+        match_id: matchId
+      });
+
+      const data = await fetchFromPhpApi(`${PHP_API_BASE}/index.php?${params.toString()}`, {
+        headers: {
+          'X-API-Key': PHP_API_KEY
+        }
+      });
+
+      if (!data || !data.success) {
+        throw new Error(data?.message || 'Failed to load streams');
+      }
+
+      const mappedStreams: StreamingLink[] = (data.data || []).map((stream: any) => ({
+        id: String(stream.id),
+        name: stream.name,
+        quality: stream.quality || 'HD',
+        language: stream.language || 'Unknown',
+        rating: stream.rating ? Number(stream.rating) : 0,
+        verified: Boolean(stream.verified),
+        url: stream.url
+      }));
+
+      setStreams(mappedStreams);
+    } catch (err) {
+      setStreamsError(err instanceof Error ? err.message : 'Failed to load streams');
+    } finally {
+      setStreamsLoading(false);
+    }
+  };
+
+  const handleStreamSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSubmitState('submitting');
+    setSubmitError(null);
+
+    try {
+      const payload = {
+        match_id: matchId,
+        name: streamForm.name.trim(),
+        url: streamForm.url.trim(),
+        quality: streamForm.quality,
+        language: streamForm.language.trim() || 'English',
+        submitted_by: streamForm.submittedBy.trim() || 'Anonymous'
+      };
+
+      const params = new URLSearchParams({
+        endpoint: 'links',
+        action: 'submit'
+      });
+
+      const data = await fetchFromPhpApi(`${PHP_API_BASE}/index.php?${params.toString()}`, {
+        method: 'POST',
+        headers: {
+          'X-API-Key': PHP_API_KEY
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!data || !data.success) {
+        throw new Error(data?.message || 'Submission failed');
+      }
+
+      setSubmitState('success');
+      setStreamForm({
+        name: '',
+        url: '',
+        quality: 'HD',
+        language: 'English',
+        submittedBy: ''
+      });
+    } catch (err) {
+      setSubmitState('error');
+      setSubmitError(err instanceof Error ? err.message : 'Submission failed');
+    }
+  };
 
   useEffect(() => {
     const fetchMatchData = async () => {
@@ -209,6 +310,10 @@ export default function MatchDetails({ matchId }: MatchDetailsProps) {
     }
   }, [matchId]);
 
+  useEffect(() => {
+    fetchStreams();
+  }, [matchId]);
+
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -320,14 +425,30 @@ export default function MatchDetails({ matchId }: MatchDetailsProps) {
                 <span className="bg-white/20 p-2 rounded-lg">📺</span>
                 Watch Live Streams
                 <span className="bg-white/20 px-3 py-1 rounded-full text-sm font-medium">
-                  {mockStreams.length} Available
+                  {streamsLoading ? 'Loading...' : `${streams.length} Available`}
                 </span>
               </h3>
               <p className="mt-2 opacity-90">Choose from verified streaming platforms</p>
             </div>
             
             <div className="p-6 space-y-4">
-              {mockStreams.map((stream, index) => (
+              {streamsLoading && (
+                <div className="text-center text-gray-600">Loading streams...</div>
+              )}
+
+              {streamsError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                  Failed to load streams: {streamsError}
+                </div>
+              )}
+
+              {!streamsLoading && !streamsError && streams.length === 0 && (
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+                  No approved streams yet. Be the first to submit one below.
+                </div>
+              )}
+
+              {streams.map((stream, index) => (
                 <div key={stream.id} className={`group relative overflow-hidden rounded-xl border-2 transition-all duration-300 hover:border-blue-400 hover:shadow-lg ${
                   stream.verified ? 'border-green-200 bg-green-50/50' : 'border-gray-200 bg-gray-50/50'
                 }`}>
@@ -355,7 +476,7 @@ export default function MatchDetails({ matchId }: MatchDetailsProps) {
                         <div className="flex items-center gap-4 text-sm">
                           <span className={`px-3 py-1 rounded-lg font-bold text-white ${
                             stream.quality === '4K' ? 'bg-gradient-to-r from-purple-500 to-pink-500' :
-                            stream.quality === 'FHD' ? 'bg-gradient-to-r from-blue-500 to-cyan-500' :
+                            stream.quality === 'FHD' || stream.quality === 'Full HD' ? 'bg-gradient-to-r from-blue-500 to-cyan-500' :
                             stream.quality === 'HD' ? 'bg-gradient-to-r from-green-500 to-teal-500' : 
                             'bg-gradient-to-r from-gray-400 to-gray-500'
                           }`}>
@@ -388,6 +509,95 @@ export default function MatchDetails({ matchId }: MatchDetailsProps) {
                   </div>
                 </div>
               ))}
+
+              <div className="rounded-xl border border-blue-200 bg-blue-50 p-6">
+                <h4 className="text-lg font-bold text-blue-900">Submit a stream link</h4>
+                <p className="text-sm text-blue-700">All submissions are reviewed before publishing.</p>
+
+                <form onSubmit={handleStreamSubmit} className="mt-4 space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="text-sm font-medium text-blue-900">Stream Name</label>
+                      <input
+                        className="mt-1 w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        name="name"
+                        value={streamForm.name}
+                        onChange={handleStreamInputChange}
+                        placeholder="Example: HD Stream 1"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-blue-900">Stream URL</label>
+                      <input
+                        className="mt-1 w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        name="url"
+                        value={streamForm.url}
+                        onChange={handleStreamInputChange}
+                        placeholder="https://example.com/stream"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div>
+                      <label className="text-sm font-medium text-blue-900">Quality</label>
+                      <select
+                        className="mt-1 w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        name="quality"
+                        value={streamForm.quality}
+                        onChange={handleStreamInputChange}
+                      >
+                        <option value="SD">SD</option>
+                        <option value="HD">HD</option>
+                        <option value="FHD">FHD</option>
+                        <option value="4K">4K</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-blue-900">Language</label>
+                      <input
+                        className="mt-1 w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        name="language"
+                        value={streamForm.language}
+                        onChange={handleStreamInputChange}
+                        placeholder="English"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-blue-900">Your Name</label>
+                      <input
+                        className="mt-1 w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        name="submittedBy"
+                        value={streamForm.submittedBy}
+                        onChange={handleStreamInputChange}
+                        placeholder="Anonymous"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+                    disabled={submitState === 'submitting'}
+                  >
+                    {submitState === 'submitting' ? 'Submitting...' : 'Submit for Review'}
+                  </button>
+                </form>
+
+                {submitState === 'success' && (
+                  <div className="mt-3 text-sm text-green-700">
+                    Thanks! Your link is pending approval.
+                  </div>
+                )}
+
+                {submitState === 'error' && submitError && (
+                  <div className="mt-3 text-sm text-red-700">
+                    {submitError}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Premium Ad Space */}

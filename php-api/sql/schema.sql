@@ -61,6 +61,34 @@ CREATE TABLE IF NOT EXISTS matches (
     INDEX idx_match_timestamp (match_timestamp)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Create stream links table
+CREATE TABLE IF NOT EXISTS stream_links (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    match_id INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    url VARCHAR(1024) NOT NULL,
+    quality VARCHAR(20) DEFAULT 'HD',
+    language VARCHAR(50) DEFAULT 'English',
+    submitted_by VARCHAR(100) DEFAULT 'Anonymous',
+    submitted_ip VARCHAR(45),
+    submitted_user_agent VARCHAR(255),
+    status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+    is_working BOOLEAN DEFAULT TRUE,
+    rating DECIMAL(3,2) DEFAULT 0,
+    views INT DEFAULT 0,
+    approved_by VARCHAR(100),
+    approved_at DATETIME,
+    rejected_reason VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
+
+    INDEX idx_match_status (match_id, status),
+    INDEX idx_status (status),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Create cache metadata table
 CREATE TABLE IF NOT EXISTS cache_metadata (
     cache_key VARCHAR(50) PRIMARY KEY,

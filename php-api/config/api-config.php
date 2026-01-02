@@ -9,6 +9,11 @@
 define('API_SECRET_KEY', 'yf_prod_' . hash('sha256', 'football.opex.associates.2024'));
 define('API_SPORTS_KEY', '2d82524e5b7054f7d93825e696a35074');
 
+// Admin Authentication (change these values for production)
+define('ADMIN_SECRET_KEY', 'yf_admin_' . hash('sha256', 'football.opex.associates.admin.2024'));
+define('ADMIN_USERNAME', 'yf_admin');
+define('ADMIN_PASSWORD', 'change_me');
+
 // API-Sports Configuration
 define('API_SPORTS_BASE_URL', 'https://v3.football.api-sports.io');
 define('API_SPORTS_HEADER', 'x-apisports-key');
