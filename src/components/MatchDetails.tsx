@@ -6,6 +6,7 @@ import { fetchFromPhpApi } from '@/lib/apiUtils';
 
 const PHP_API_BASE = process.env.NEXT_PUBLIC_PHP_API_BASE || 'https://football.opex.associates/api';
 const PHP_API_KEY = process.env.NEXT_PUBLIC_PHP_API_KEY || '';
+const PHP_API_ROOT = (process.env.NEXT_PUBLIC_PHP_API_ROOT || PHP_API_BASE).replace(/\/api\/?$/, '');
 
 interface MatchDetailsProps {
   matchId: string;
@@ -202,7 +203,7 @@ export default function MatchDetails({ matchId }: MatchDetailsProps) {
         setError(null);
 
         // Fetch match details
-        const matchResponse = await fetch(`http://localhost:8080/match-details.php?id=${matchId}`);
+        const matchResponse = await fetch(`${PHP_API_ROOT}/match-details.php?id=${encodeURIComponent(matchId)}`);
         if (!matchResponse.ok) {
           throw new Error('Failed to fetch match details');
         }
@@ -241,7 +242,7 @@ export default function MatchDetails({ matchId }: MatchDetailsProps) {
           // Fetch match statistics if the match is live or finished
           if (['1H', '2H', 'HT', 'FT', 'AET', 'PEN'].includes(matchInfo.status)) {
             try {
-              const statsResponse = await fetch(`http://localhost:8080/match-statistics.php?id=${matchId}`);
+              const statsResponse = await fetch(`${PHP_API_ROOT}/match-statistics.php?id=${encodeURIComponent(matchId)}`);
               if (statsResponse.ok) {
                 const statsData = await statsResponse.json();
                 if (statsData.response && statsData.response.length > 0) {
